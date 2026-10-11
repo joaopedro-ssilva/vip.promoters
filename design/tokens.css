@@ -1,0 +1,308 @@
+@import "tailwindcss";
+
+/* VIP Promoters — credencial de acesso.
+   Aplicar as variáveis next/font --font-display e --font-body no elemento html.
+   Tema padrão escuro; alternar com data-theme="light" no mesmo elemento. */
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-hover: var(--surface-hover);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-muted: var(--ink-muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-active: var(--accent-active);
+  --color-on-accent: var(--on-accent);
+  --color-accent-secondary: var(--accent-secondary);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-active: var(--danger-active);
+  --color-info: var(--info);
+  --color-on-danger: var(--on-danger);
+  --color-focus: var(--focus);
+  --font-heading: var(--font-display), "Arial Narrow", sans-serif;
+  --font-sans: var(--font-body), Arial, sans-serif;
+  --shadow-card: var(--elevation-card);
+  --shadow-popover: var(--elevation-popover);
+  --shadow-dialog: var(--elevation-dialog);
+}
+
+@theme {
+  --spacing: 0.25rem;
+
+  --breakpoint-sm: 40rem;
+  --breakpoint-md: 48rem;
+  --breakpoint-lg: 64rem;
+  --breakpoint-xl: 80rem;
+  --breakpoint-2xl: 96rem;
+
+  --container-auth: 28rem;
+  --container-reading: 40rem;
+  --container-form: 48rem;
+  --container-promoter: 64rem;
+  --container-site: 75rem;
+  --container-workspace: 90rem;
+
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.5;
+  --text-caption--letter-spacing: 0.01em;
+  --text-caption--font-weight: 500;
+  --text-label: 0.875rem;
+  --text-label--line-height: 1.428571;
+  --text-label--letter-spacing: 0em;
+  --text-label--font-weight: 600;
+  --text-body: 1rem;
+  --text-body--line-height: 1.5;
+  --text-body--letter-spacing: 0em;
+  --text-body--font-weight: 400;
+  --text-lead: 1.125rem;
+  --text-lead--line-height: 1.555556;
+  --text-lead--letter-spacing: 0em;
+  --text-lead--font-weight: 500;
+  --text-section: 1.5rem;
+  --text-section--line-height: 1.166667;
+  --text-section--letter-spacing: 0.01em;
+  --text-section--font-weight: 600;
+  --text-page: 2rem;
+  --text-page--line-height: 1.125;
+  --text-page--letter-spacing: 0.01em;
+  --text-page--font-weight: 600;
+  --text-page-wide: 2.5rem;
+  --text-page-wide--line-height: 1.1;
+  --text-page-wide--letter-spacing: 0.01em;
+  --text-page-wide--font-weight: 600;
+  --text-balance: 3rem;
+  --text-balance--line-height: 1;
+  --text-balance--letter-spacing: -0.02em;
+  --text-balance--font-weight: 800;
+  --text-hero: 3.5rem;
+  --text-hero--line-height: 0.98;
+  --text-hero--letter-spacing: -0.01em;
+  --text-hero--font-weight: 700;
+  --text-hero-wide: 6rem;
+  --text-hero-wide--line-height: 0.98;
+  --text-hero-wide--letter-spacing: -0.01em;
+  --text-hero-wide--font-weight: 700;
+
+  --radius-control: 0.5rem;
+  --radius-card: 0.75rem;
+  --radius-panel: 1rem;
+  --radius-pill: 9999px;
+
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-enter: cubic-bezier(0, 0, 0.2, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  --animate-enter: vp-enter 180ms var(--ease-enter) both;
+  --animate-spinner: vp-spin 800ms linear infinite;
+  --animate-skeleton: vp-skeleton 1400ms var(--ease-standard) infinite;
+
+  @keyframes vp-enter {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes vp-spin {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes vp-skeleton {
+    0%, 100% { background-color: var(--surface-raised); }
+    50% { background-color: var(--surface-hover); }
+  }
+}
+
+:root {
+  color-scheme: dark;
+  --canvas: #10130F;
+  --surface: #181D16;
+  --surface-raised: #22291F;
+  --surface-hover: #2B3426;
+  --line: #728169;
+  --ink: #F3F5EB;
+  --ink-secondary: #CBD2C1;
+  --ink-muted: #A5B39A;
+  --accent: #D1F267;
+  --accent-hover: #DDF789;
+  --accent-active: #B8DD4B;
+  --on-accent: #182008;
+  --accent-secondary: #F5AF82;
+  --success: #9FE0B2;
+  --warning: #F3CE73;
+  --danger: #FFABA5;
+  --danger-hover: #FFC1BC;
+  --danger-active: #F5948C;
+  --info: #9BCDEB;
+  --on-danger: #32120F;
+  --focus: var(--accent);
+  --scrim: rgb(0 0 0 / 0.64);
+  --elevation-card: 0 2px 8px rgb(0 0 0 / 0.16);
+  --elevation-popover: 0 8px 24px rgb(0 0 0 / 0.24);
+  --elevation-dialog: 0 24px 64px rgb(0 0 0 / 0.40);
+
+  --duration-fast: 120ms;
+  --duration-standard: 180ms;
+  --duration-slow: 240ms;
+  --duration-spin: 800ms;
+  --duration-skeleton: 1400ms;
+
+  --sidebar-width: 15rem;
+  --topbar-height: 4rem;
+  --tabbar-height: 4.5rem;
+  --touch-target: 2.75rem;
+  --icon-sm: 1rem;
+  --icon-md: 1.25rem;
+  --icon-lg: 1.5rem;
+  --icon-stroke: 1.75;
+  --stroke-default: 1px;
+  --stroke-emphasis: 2px;
+  --focus-width: 2px;
+  --focus-offset: 3px;
+
+  --z-base: 0;
+  --z-sticky: 20;
+  --z-nav: 30;
+  --z-popover: 40;
+  --z-scrim: 50;
+  --z-dialog: 60;
+  --z-toast: 70;
+  --z-skip: 80;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --canvas: #F3F4EB;
+  --surface: #FFFFFF;
+  --surface-raised: #E8ECDD;
+  --surface-hover: #DDE5D0;
+  --line: #68765B;
+  --ink: #192013;
+  --ink-secondary: #3F4E34;
+  --ink-muted: #536445;
+  --accent: #385900;
+  --accent-hover: #2C4700;
+  --accent-active: #213700;
+  --on-accent: #FFFFFF;
+  --accent-secondary: #8E4218;
+  --success: #23633D;
+  --warning: #765400;
+  --danger: #A12627;
+  --danger-hover: #8B1D20;
+  --danger-active: #721719;
+  --info: #255D7B;
+  --on-danger: #FFFFFF;
+  --scrim: rgb(0 0 0 / 0.40);
+  --elevation-card: 0 2px 8px rgb(0 0 0 / 0.06);
+  --elevation-popover: 0 8px 24px rgb(0 0 0 / 0.12);
+  --elevation-dialog: 0 24px 64px rgb(0 0 0 / 0.18);
+}
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-size: 100%;
+    scroll-padding-block-start: calc(var(--topbar-height) + 1rem);
+  }
+
+  body {
+    margin: 0;
+    min-inline-size: 0;
+    min-block-size: 100dvh;
+    background-color: var(--canvas);
+    color: var(--ink);
+    font-family: var(--font-body), Arial, sans-serif;
+    font-size: 1rem;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-display), "Arial Narrow", sans-serif;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  p, li, dd {
+    overflow-wrap: anywhere;
+  }
+
+  img, video, svg, canvas {
+    max-inline-size: 100%;
+  }
+
+  button, input, textarea, select {
+    font: inherit;
+  }
+
+  input, textarea, select {
+    font-size: 1rem;
+    accent-color: var(--accent);
+  }
+
+  input::placeholder, textarea::placeholder {
+    color: var(--ink-muted);
+    opacity: 1;
+  }
+
+  a {
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+
+  :where(button, [role="button"], a, input, textarea, select, summary, [tabindex]) {
+    scroll-margin-block: calc(var(--topbar-height) + 1rem) calc(var(--tabbar-height) + env(safe-area-inset-bottom) + 1rem);
+  }
+
+  :focus-visible {
+    outline: var(--focus-width) solid var(--focus);
+    outline-offset: var(--focus-offset);
+  }
+
+  ::selection {
+    background-color: var(--accent);
+    color: var(--on-accent);
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) var(--canvas);
+  }
+
+  ::-webkit-scrollbar {
+    inline-size: 8px;
+    block-size: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background-color: var(--canvas);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--line);
+    border: 2px solid var(--canvas);
+    border-radius: var(--radius-pill);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  @media (forced-colors: active) {
+    :focus-visible {
+      outline: 2px solid Highlight;
+      outline-offset: 3px;
+    }
+  }
+}
+
