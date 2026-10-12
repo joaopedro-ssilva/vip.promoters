@@ -83,7 +83,7 @@ export function PromoterProfile() {
           Mais
         </h2>
         <div className="flex flex-col gap-4">
-          <Link href="/promoter/extrato" className="inline-flex min-h-11 items-center text-label text-accent underline">
+          <Link href="/promoter/extrato" className="inline-flex min-h-11 items-center text-label text-success underline">
             Extrato de pontos
           </Link>
           <fieldset>
@@ -278,7 +278,7 @@ function Teams() {
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   {m.status === "approved" &&
                     (inUse ? (
-                      <span className="text-label text-accent">Equipe em uso</span>
+                      <span className="text-label text-success">Equipe em uso</span>
                     ) : (
                       <Button size="sm" variant="secondary" onClick={() => team.setActiveOrg(m.organization.id)}>
                         Usar esta equipe

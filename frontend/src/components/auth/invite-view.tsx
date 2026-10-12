@@ -140,7 +140,7 @@ export function InviteView({ code }: { code: string }) {
   }
 
   return (
-    <AuthCard title={`Entre para a equipe ${org.name}`} eyebrow="Convite">
+    <AuthCard title="Entre para a equipe" highlight={org.name} eyebrow="Convite">
       <div className="flex flex-col gap-6">
         <div className="flex items-center gap-3">
           <Avatar name={org.name} src={org.instagram_profile_picture_url} size="lg" />

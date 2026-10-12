@@ -21,6 +21,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/feedback";
 import { cn } from "@/lib/cn";
+import { initials } from "@/lib/format";
 import { managerDashboardQuery } from "@/lib/queries";
 import { AccountMenu } from "./account-menu";
 import { NotificationBell } from "./notification-bell";
@@ -32,17 +33,19 @@ interface NavItem {
   icon: LucideIcon;
   exact?: boolean;
   counter?: "pending_members" | "pending_redemptions";
+  /** Grupo da barra lateral (rótulo estrutural acima do primeiro item). */
+  group: string;
 }
 
 const NAV: NavItem[] = [
-  { href: "/gestor", label: "Visão geral", icon: LayoutDashboard, exact: true },
-  { href: "/gestor/campanhas", label: "Campanhas", icon: Megaphone },
-  { href: "/gestor/equipe", label: "Equipe", icon: Users, counter: "pending_members" },
-  { href: "/gestor/ranking", label: "Ranking", icon: Trophy },
-  { href: "/gestor/lojinha", label: "Lojinha", icon: Gift },
-  { href: "/gestor/resgates", label: "Resgates", icon: Ticket, counter: "pending_redemptions" },
-  { href: "/gestor/instagram", label: "Instagram", icon: Camera },
-  { href: "/gestor/configuracoes", label: "Configurações", icon: Settings },
+  { href: "/gestor", label: "Visão geral", icon: LayoutDashboard, exact: true, group: "Operação" },
+  { href: "/gestor/campanhas", label: "Campanhas", icon: Megaphone, group: "Operação" },
+  { href: "/gestor/equipe", label: "Equipe", icon: Users, counter: "pending_members", group: "Operação" },
+  { href: "/gestor/ranking", label: "Ranking", icon: Trophy, group: "Operação" },
+  { href: "/gestor/lojinha", label: "Lojinha", icon: Gift, group: "Recompensas" },
+  { href: "/gestor/resgates", label: "Resgates", icon: Ticket, counter: "pending_redemptions", group: "Recompensas" },
+  { href: "/gestor/instagram", label: "Instagram", icon: Camera, group: "Conta" },
+  { href: "/gestor/configuracoes", label: "Configurações", icon: Settings, group: "Conta" },
 ];
 
 function useCounters() {
@@ -57,8 +60,8 @@ function SideNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const counters = useCounters();
   return (
-    <nav aria-label="Principal" className="flex flex-col gap-1">
-      {NAV.map((item) => {
+    <nav aria-label="Principal" className="flex flex-col gap-0.5">
+      {NAV.map((item, index) => {
         const active = item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
         const count = item.counter ? counters[item.counter] : 0;
         const Icon = item.icon;
@@ -66,30 +69,37 @@ function SideNav({ onNavigate }: { onNavigate?: () => void }) {
           item.counter === "pending_members"
             ? `${count} ${count === 1 ? "pendente" : "pendentes"}`
             : `${count} ${count === 1 ? "pendente" : "pendentes"}`;
+        const firstOfGroup = index === 0 || NAV[index - 1].group !== item.group;
         return (
+          <div key={item.href}>
+          {firstOfGroup && <p className={cn("rotulo px-3 pb-2", index === 0 ? "pt-2" : "pt-5")}>{item.group}</p>}
           <Link
-            key={item.href}
             href={item.href}
             onClick={onNavigate}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "relative flex min-h-11 items-center gap-3 rounded-control px-3 py-2 text-label",
+              "group relative flex min-h-11 items-center gap-3 rounded-control pl-6 pr-3 py-2 text-label transition-colors duration-[var(--duration-fast)]",
               active
-                ? "bg-surface-raised text-ink before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:bg-accent"
-                : "text-ink-secondary hover:bg-surface-hover hover:text-ink active:bg-surface-raised",
+                ? "bg-surface-raised font-semibold text-ink-strong before:absolute before:left-2.5 before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-[2px] before:bg-accent"
+                : "font-medium text-ink-muted hover:bg-surface-raised/60 hover:text-ink",
             )}
           >
-            <Icon aria-hidden="true" strokeWidth={1.75} className="size-6 shrink-0" />
+            <Icon
+              aria-hidden="true"
+              strokeWidth={1.75}
+              className={cn("size-5 shrink-0", active ? "text-success" : "text-ink-muted group-hover:text-ink-secondary")}
+            />
             <span className="min-w-0 flex-1">
               {item.label}
               {count > 0 && <span className="sr-only">, {countLabel}</span>}
             </span>
             {count > 0 && (
-              <span aria-hidden="true" className="rounded-pill bg-surface-hover px-2 py-0.5 text-caption tabular-nums text-ink">
+              <span aria-hidden="true" className="num inline-flex h-5 min-w-5 items-center justify-center rounded-pill border border-warning-border bg-warning-soft px-1.5 text-2xs font-semibold text-warning">
                 {count}
               </span>
             )}
           </Link>
+          </div>
         );
       })}
     </nav>
@@ -99,15 +109,26 @@ function SideNav({ onNavigate }: { onNavigate?: () => void }) {
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { user } = useAuth();
   return (
-    <div className="flex h-full flex-col gap-4 p-4">
-      <Brand href="/gestor" />
-      <div className="min-w-0 rounded-control border border-line-subtle bg-surface-raised px-3 py-2">
-        <p className="text-caption text-ink-muted">Organização</p>
-        {user?.organization ? (
-          <p className="truncate text-label text-ink">{user.organization.name}</p>
-        ) : (
-          <Skeleton className="mt-1 h-4 w-28" />
-        )}
+    <div className="flex h-full flex-col gap-4 px-3.5 pb-4 pt-5">
+      <Brand href="/gestor" className="px-1.5" />
+      {/* A marca do produto não compete com a da conta: logo abaixo, o emblema
+          com as iniciais da organização — "que sistema é este" contra "em que
+          conta eu estou". */}
+      <div className="flex min-w-0 items-center gap-2.5 rounded-control border border-line-subtle bg-surface px-2.5 py-2">
+        <span
+          aria-hidden="true"
+          className="grid size-8 shrink-0 place-items-center rounded-[0.5625rem] border border-accent-border bg-accent-soft text-2xs font-bold tracking-[0.02em] text-success"
+        >
+          {initials(user?.organization?.name)}
+        </span>
+        <div className="min-w-0">
+          <p className="rotulo">Organização</p>
+          {user?.organization ? (
+            <p className="truncate text-label text-ink-strong">{user.organization.name}</p>
+          ) : (
+            <Skeleton className="mt-1 h-4 w-28" />
+          )}
+        </div>
       </div>
       <SideNav onNavigate={onNavigate} />
     </div>
@@ -137,12 +158,12 @@ function Breadcrumb() {
   if (crumbs.length === 1) return <p className="hidden text-label text-ink-secondary md:block">Visão geral</p>;
   return (
     <nav aria-label="Você está em" className="hidden md:block">
-      <ol className="flex flex-wrap items-center gap-2 text-label text-ink-secondary">
+      <ol className="flex flex-wrap items-center gap-2 text-caption text-ink-muted">
         {crumbs.map((c, i) => (
           <li key={c.href} className="flex items-center gap-2">
             {i > 0 && <span aria-hidden="true">/</span>}
             {i === crumbs.length - 1 ? (
-              <span aria-current="page" className="text-ink">
+              <span aria-current="page" className="font-semibold text-ink">
                 {c.label}
               </span>
             ) : (
@@ -175,7 +196,7 @@ export function ManagerShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="lg:grid lg:grid-cols-[var(--sidebar-width)_minmax(0,1fr)]">
-      <aside className="sticky top-0 hidden h-dvh overflow-y-auto border-r border-line-subtle bg-surface lg:block">
+      <aside className="sticky top-0 hidden h-dvh overflow-y-auto border-r border-line-subtle bg-surface-sunken lg:block">
         <SidebarContent />
       </aside>
 
@@ -186,7 +207,7 @@ export function ManagerShell({ children }: { children: ReactNode }) {
         onClick={(e) => {
           if (e.target === e.currentTarget) setDrawer(false);
         }}
-        className="m-0 h-dvh max-h-none w-[min(20rem,calc(100%-2rem))] overflow-y-auto border-r border-line bg-surface p-0 text-ink shadow-dialog backdrop:bg-[var(--scrim)]"
+        className="m-0 h-dvh max-h-none w-[min(20rem,calc(100%-2rem))] overflow-y-auto border-r border-line-subtle bg-surface-sunken p-0 text-ink shadow-dialog backdrop:bg-[var(--scrim)]"
       >
         {drawer && (
           <div className="flex h-full flex-col">
@@ -200,10 +221,10 @@ export function ManagerShell({ children }: { children: ReactNode }) {
         )}
       </dialog>
 
-      <div className="min-w-0">
+      <div className="palco min-w-0">
         <header
           ref={topRef}
-          className="sticky top-0 z-20 flex min-h-16 items-center gap-3 border-b border-line-subtle bg-surface px-4 md:px-6 lg:px-8"
+          className="sticky top-0 z-20 flex min-h-16 items-center gap-3 border-b border-line-subtle bg-canvas/80 px-4 backdrop-blur-lg md:px-6 lg:px-10"
         >
           <Button variant="ghost" iconOnly aria-label="Abrir menu" className="lg:hidden" onClick={() => setDrawer(true)}>
             <Menu aria-hidden="true" strokeWidth={1.75} className="size-6" />
@@ -217,7 +238,7 @@ export function ManagerShell({ children }: { children: ReactNode }) {
             </div>
           </div>
           {mock && (
-            <span className="hidden items-center gap-1 rounded-pill border border-line bg-surface-raised px-2 py-1 text-caption text-accent-secondary sm:inline-flex">
+            <span className="hidden items-center gap-1.5 rounded-pill border border-violet-border bg-violet-soft px-2.5 py-1 text-2xs font-semibold tracking-[0.04em] text-violet sm:inline-flex">
               <FlaskConical aria-hidden="true" strokeWidth={1.75} className="size-4" />
               Modo demonstração
             </span>
@@ -227,12 +248,12 @@ export function ManagerShell({ children }: { children: ReactNode }) {
           <AccountMenu />
         </header>
         {mock && (
-          <p className="flex items-center justify-center gap-1 border-b border-line-subtle bg-surface-raised px-4 py-1 text-caption text-accent-secondary sm:hidden">
+          <p className="flex items-center justify-center gap-1 border-b border-violet-border bg-violet-soft px-4 py-1 text-caption text-violet sm:hidden">
             <FlaskConical aria-hidden="true" strokeWidth={1.75} className="size-4" />
             Modo demonstração
           </p>
         )}
-        <main id="conteudo" tabIndex={-1} className="mx-auto w-full max-w-workspace px-4 py-8 outline-none md:px-6 lg:px-8">
+        <main id="conteudo" tabIndex={-1} className="mx-auto w-full max-w-workspace px-4 pb-10 pt-6 outline-none sm:px-10 sm:pt-8">
           {children}
         </main>
       </div>

@@ -229,9 +229,9 @@ export function TeamPage() {
         <>
           {/* md+: table */}
           <div className="hidden md:block" aria-busy={members.isFetching}>
-            <table className="w-full border-collapse overflow-hidden rounded-card border border-line-subtle text-left">
+            <table className="tabela-leitura solido w-full overflow-hidden rounded-card text-left">
               <caption className="sr-only">Promoters da equipe</caption>
-              <thead className="bg-surface-raised text-label text-ink-secondary">
+              <thead>
                 <tr>
                   <th scope="col" className="min-h-11 px-4 py-3 font-semibold">Promoter</th>
                   <th scope="col" className="px-4 py-3 font-semibold">Instagram</th>
@@ -241,7 +241,7 @@ export function TeamPage() {
                   <th scope="col" className="px-4 py-3 font-semibold">Ações</th>
                 </tr>
               </thead>
-              <tbody className="bg-surface">
+              <tbody>
                 {items.map((m) => (
                   <tr key={m.id} className="border-t border-line-subtle align-middle">
                     <td className="min-w-0 px-4 py-3">

@@ -66,7 +66,7 @@ export function SettingsPage() {
         <p className="text-label font-normal text-ink-secondary">Fuso horário: Horário de Brasília (fixo).</p>
         <p className="mt-4 text-label">
           A conexão com o Instagram fica em{" "}
-          <Link href="/gestor/instagram" className="text-accent underline">
+          <Link href="/gestor/instagram" className="text-success underline">
             Instagram
           </Link>
           .

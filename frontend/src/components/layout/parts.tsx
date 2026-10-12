@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Moon, Sun, Ticket } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, type RefObject } from "react";
@@ -10,17 +10,36 @@ import { cn } from "@/lib/cn";
 import { useTheme } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
 
+/**
+ * A marca do produto, no desenho do design system do Camarim: um quadrado lima
+ * de cantos generosos com o sinal recortado em escuro, e o logotipo em Syne 800.
+ * O sinal é um ingresso com a perfuração no meio — a "entrada VIP".
+ */
 export function Brand({ href = "/", className, withIcon = true, compact = false }: { href?: string; className?: string; withIcon?: boolean; compact?: boolean }) {
   return (
-    <Link href={href} aria-label="VIP Promoters, página inicial" className={cn("inline-flex min-h-11 items-center gap-2 rounded-control", className)}>
-      {withIcon && <Ticket aria-hidden="true" strokeWidth={1.75} className="size-6 text-accent" />}
-      <span aria-hidden="true" className="font-heading text-[1.5rem] font-bold leading-none tracking-[0.01em]">
+    <Link href={href} aria-label="VIP Promoters, página inicial" className={cn("inline-flex min-h-11 items-center gap-3 rounded-control", className)}>
+      {withIcon && <BrandMark className="size-8 shrink-0" />}
+      <span aria-hidden="true" className="display text-brand font-extrabold leading-none tracking-[-0.03em] text-ink-strong">
         VIP
-      </span>
-      <span aria-hidden="true" className={cn("font-sans text-label font-bold leading-[1.4] tracking-normal", compact && "max-md:hidden")}>
-        Promoters
+        <span className={cn("ml-1.5 font-bold text-ink-secondary", compact && "max-md:hidden")}>Promoters</span>
       </span>
     </Link>
+  );
+}
+
+/** Só o sinal da marca, para onde o nome não cabe. */
+export function BrandMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 60 60" fill="none" aria-hidden="true" className={className}>
+      <rect width="60" height="60" rx="18" fill="#BCF23F" />
+      <path
+        d="M14 22a4 4 0 0 1 4-4h24a4 4 0 0 1 4 4v3.5a4.5 4.5 0 0 0 0 9V38a4 4 0 0 1-4 4H18a4 4 0 0 1-4-4v-3.5a4.5 4.5 0 0 0 0-9z"
+        stroke="#07060B"
+        strokeWidth="4.5"
+        strokeLinejoin="round"
+      />
+      <path d="M30 22v16" stroke="#07060B" strokeWidth="4" strokeLinecap="round" strokeDasharray="0.1 6" />
+    </svg>
   );
 }
 

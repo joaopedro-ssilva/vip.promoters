@@ -41,7 +41,7 @@ export function InteractionItem({ item, showCampaignLink }: { item: Interaction;
       {item.status === "unmatched" && (
         <p className="mt-2 text-label text-info">
           Este @ ainda não está vinculado a um promoter aprovado.{" "}
-          <Link href="/gestor/equipe" className="text-accent underline">
+          <Link href="/gestor/equipe" className="text-success underline">
             Ver equipe
           </Link>
         </p>
@@ -58,7 +58,7 @@ export function InteractionItem({ item, showCampaignLink }: { item: Interaction;
       )}
       {showCampaignLink && item.campaign_id && (
         <p className="mt-2 text-label">
-          <Link href={`/gestor/campanhas/${item.campaign_id}`} className="text-accent underline">
+          <Link href={`/gestor/campanhas/${item.campaign_id}`} className="text-success underline">
             Ver campanha
           </Link>
         </p>

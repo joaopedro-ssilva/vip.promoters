@@ -194,7 +194,7 @@ function RedeemBody({ orgId, reward, balance, onClose }: { orgId: string; reward
           <Button variant="secondary" onClick={onClose} data-autofocus="">
             Fechar
           </Button>
-          <Link href="/promoter/resgates" className="inline-flex min-h-12 items-center justify-center rounded-control border border-accent bg-accent px-4 text-label text-on-accent hover:bg-accent-hover">
+          <Link href="/promoter/resgates" className="gel-lima inline-flex min-h-12 items-center justify-center rounded-control px-4 text-label font-semibold">
             Ver meus resgates
           </Link>
         </DialogActions>

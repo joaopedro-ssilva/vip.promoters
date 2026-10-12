@@ -57,12 +57,13 @@ export function LoginForm() {
 
   return (
     <AuthCard
-      title="Entrar"
+      title="Bem-vindo"
+      highlight="de volta."
       description="Acesse sua conta para acompanhar campanhas, pontos e resgates."
       footer={
         <p className="text-label text-ink-secondary">
           Ainda não tem conta?{" "}
-          <Link href={signupHref} className="text-accent underline">
+          <Link href={signupHref} className="text-success underline">
             Criar conta
           </Link>
         </p>

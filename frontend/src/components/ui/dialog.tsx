@@ -77,7 +77,7 @@ export function Dialog({
         if (dismissOnBackdrop && e.target === e.currentTarget) onClose();
       }}
       className={cn(
-        "m-auto max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-panel border border-line bg-surface p-0 text-ink shadow-dialog",
+        "m-auto max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-panel border border-line-subtle bg-surface p-0 text-ink shadow-dialog",
         "backdrop:bg-[var(--scrim)] open:animate-enter",
         size === "sm" ? "w-[min(30rem,calc(100%-2rem))]" : "w-[min(48rem,calc(100%-2rem))]",
       )}
@@ -149,7 +149,7 @@ function DialogBody({
     <DirtyContext.Provider value={setReported}>
     <div className="flex flex-col gap-4 p-4 md:p-6">
       <div className="flex items-start justify-between gap-3">
-        <h2 id={titleId} className="min-w-0 font-heading text-section">
+        <h2 id={titleId} className="display min-w-0 text-section font-bold text-ink-strong">
           {title}
         </h2>
         <Button variant="ghost" iconOnly aria-label="Fechar" onClick={requestClose} className="-mr-2 -mt-1 shrink-0">
@@ -157,12 +157,12 @@ function DialogBody({
         </Button>
       </div>
       {description && (
-        <div id={descId} className="text-body text-ink-secondary">
+        <div id={descId} className="text-label font-normal text-ink-secondary">
           {description}
         </div>
       )}
       {confirming && (
-        <div role="alert" className="flex flex-col gap-3 rounded-control border border-warning bg-surface-raised p-3">
+        <div role="alert" className="flex flex-col gap-3 rounded-control border border-warning-border bg-warning-soft p-3">
           <p className="text-label text-warning">Descartar alterações? O que você preencheu será perdido.</p>
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="secondary" onClick={() => setConfirming(false)} data-autofocus>

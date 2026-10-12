@@ -27,3 +27,6 @@ backend/uploads/
 .DS_Store
 Thumbs.db
 .idea/
+
+# Redis local
+dump.rdb

@@ -366,7 +366,7 @@ function RewardForm({ reward, onClose }: { reward: Reward | null; onClose: () =>
       <div className="rounded-control bg-surface-raised p-3">
         <p className="text-caption text-ink-muted">Prévia</p>
         <p className="text-body font-bold [overflow-wrap:anywhere]">{w.name?.trim() || "Nome da recompensa"}</p>
-        <p className="text-label tabular-nums text-accent">{Number.isInteger(costNum) ? formatPoints(costNum) : "— pontos"}</p>
+        <p className="text-label tabular-nums text-success">{Number.isInteger(costNum) ? formatPoints(costNum) : "— pontos"}</p>
       </div>
 
       <DialogActions>

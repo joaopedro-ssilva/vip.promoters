@@ -10,7 +10,7 @@ export function RankingList({ entries, meMembershipId }: { entries: LeaderboardE
       {entries.map((e) => {
         const me = meMembershipId != null && e.membership_id === meMembershipId;
         const top = e.rank <= 3;
-        const posColor = e.rank === 1 ? "text-accent" : e.rank === 2 ? "text-accent-secondary" : "text-info";
+        const posColor = e.rank === 1 ? "text-success" : e.rank === 2 ? "text-accent-secondary" : "text-info";
         return (
           <li
             key={e.membership_id}
@@ -27,7 +27,7 @@ export function RankingList({ entries, meMembershipId }: { entries: LeaderboardE
             {top && (
               <span aria-hidden="true">
                 {e.rank === 1 ? (
-                  <Trophy strokeWidth={1.75} className="size-5 text-accent" />
+                  <Trophy strokeWidth={1.75} className="size-5 text-success" />
                 ) : (
                   <Medal strokeWidth={1.75} className={cn("size-5", posColor)} />
                 )}
@@ -37,7 +37,7 @@ export function RankingList({ entries, meMembershipId }: { entries: LeaderboardE
             <div className="min-w-0 flex-1 basis-40">
               <p className="text-body font-bold">
                 {e.name}
-                {me && <span className="ml-2 text-label text-accent">Você</span>}
+                {me && <span className="ml-2 text-label text-success">Você</span>}
               </p>
               <p className="text-caption text-ink-muted">@{e.instagram_username}</p>
             </div>

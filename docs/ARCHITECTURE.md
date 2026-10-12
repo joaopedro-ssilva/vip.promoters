@@ -47,7 +47,7 @@ compose.dev.yaml        dev override (backend hot reload)
 .env.example  .env      root env file (the .env is git-ignored)
 backend/                FastAPI app, alembic, tests, Dockerfile
 frontend/               Next.js app, Dockerfile (standalone output)
-design/                 DESIGN.md + tokens.css (visual direction for the frontend)
+design/                 DESIGN.md (design system; tokens live in frontend/src/app/globals.css)
 docs/ARCHITECTURE.md    this file
 docs/META.md            guide (pt-BR): connecting Instagram, Meta App Review, timelines
 ```

@@ -12,9 +12,11 @@ Regra central: **no máximo 1 comentário pontuado por promoter em cada campanha
 | Item | Estado |
 |---|---|
 | Produto (gestor, promoter, pontos, lojinha) | Pronto e testado em modo simulado |
+| Backend | 109 testes passando e lint limpo. Segurança de sessão, CSRF, webhooks e isolamento entre equipes sólidos (ver [Segurança](#segurança)) |
+| Visual | Design system "Noite / Lima / Violeta", o mesmo do Camarim ([design/DESIGN.md](design/DESIGN.md)) |
 | Instagram de verdade | Código escrito, **nunca testado contra a API real** (exige um app seu na Meta) |
-| Aprovação da Meta (App Review) | Não iniciada |
-| Cobrança, recuperação de senha, e-mails, painel de administrador | Não existem (ver [O que falta para virar SaaS](#o-que-falta-para-virar-saas)) |
+| Aprovação da Meta (App Review) | Não iniciada. Bloqueada por: CNPJ verificado, domínio com HTTPS, Política de Privacidade e Termos (ver [Roteiro](#roteiro-até-o-app-review-e-o-lançamento)) |
+| Cobrança, recuperação de senha, e-mails, exclusão de conta, painel de administrador | Não existem |
 | Hospedagem | Roda só na máquina local, via Docker |
 
 ## O que o Instagram deixa (e não deixa) saber
@@ -104,17 +106,74 @@ O gestor é quem confirma que um @ pertence a um promoter:
 
 Sem isso, um promoter poderia assumir o @ de outra pessoa e receber os pontos dela.
 
-## O que falta para virar SaaS
+## Roteiro até o App Review e o lançamento
 
-Cada gestor já tem a sua organização isolada (equipe, campanhas, pontos e lojinha próprios; um cliente não enxerga nada do outro, e isso está coberto por testes). O que ainda não existe:
+Cada gestor já tem a sua organização isolada (equipe, campanhas, pontos e lojinha próprios; um cliente não enxerga nada do outro, e isso está coberto por testes). O caminho até lançar, em ordem:
 
-- **Cobrança**: não há planos, assinatura nem pagamento. Qualquer um se cadastra e usa de graça.
-- **Recuperação de senha** e **confirmação de e-mail**: o app ainda não envia e-mails.
-- **Política de Privacidade e Termos de Uso**: as páginas não existem, e a Meta exige a primeira para aprovar o app.
-- **Painel de administrador**: para ver clientes, bloquear contas e acompanhar o uso.
-- **Hospedagem** em endereço público com HTTPS.
-- **Botão "Ver story"** no feed da campanha, para o gestor conferir o conteúdo da menção.
-- **Moderação**: não há estorno automático se o promoter apagar o comentário depois de pontuar.
+### Etapa 1: validar o Instagram real (modo de teste da Meta)
+
+Nada disto depende de aprovação; depende de um app criado na Meta e de um endereço com HTTPS. Siga o [guia da Meta](docs/META.md), Parte 1.
+
+1. Criar o app na Meta ("API setup with Instagram login") e preencher `META_APP_ID` / `META_APP_SECRET`.
+2. Subir em um endereço público com HTTPS (túnel serve para este teste).
+3. Conectar um Instagram profissional cadastrado como testador e conferir, **com conta real**:
+   - a lista de posts ao criar campanha;
+   - comentários chegando pelo webhook **e** pela busca periódica;
+   - menção em story chegando pelo webhook (exige, no app do Instagram do gestor, *Configurações → Mensagens → Ferramentas conectadas → Permitir acesso às mensagens*);
+   - publicar um post pelo app (exige endereço público para a Meta baixar a imagem);
+   - desconectar e reconectar.
+4. **Ponto de atenção a confirmar no primeiro teste:** a assinatura `X-Hub-Signature-256` dos webhooks é conferida com `META_APP_SECRET`. No login do Instagram há duas chaves no painel (a do app Meta e a do "app do Instagram"); se todo webhook vier recusado com 403, a chave usada para assinar é a outra, e o backend precisa de uma variável separada para ela.
+
+### Etapa 2: o que precisa existir antes de pedir o App Review
+
+| Item | Por quê | Situação |
+|---|---|---|
+| Domínio próprio com HTTPS (não túnel) | a Meta testa as URLs de callback e o revisor usa o app | falta |
+| Página de **Política de Privacidade** pública | obrigatória no painel da Meta | falta |
+| Página de **Termos de Uso** | exigida na prática para SaaS; o revisor procura | falta |
+| **Exclusão de dados de verdade** | o callback `/meta/data-deletion` hoje só apaga a conexão do Instagram; os comentários e @ guardados de quem pediu a exclusão continuam no banco. A Meta e a LGPD esperam que sumam | parcial |
+| **Excluir a própria conta** pelo app (gestor e promoter) | LGPD; o revisor costuma procurar | falta |
+| Empresa verificada no Meta Business (CNPJ) | sem ela a análise do app não começa | falta (ver [guia](docs/META.md), Parte 3) |
+| Conta de teste para o revisor, com campanha ativa e roteiro passo a passo | reprovação mais comum é login de teste que não funciona | falta |
+| Vídeo de tela por permissão (4 vídeos) | exigido para cada uma das 4 permissões | falta |
+| Revisar o pedido de `instagram_business_manage_messages` | é a permissão mais escrutinada; o uso declarado é **só** receber menções em story. O app nunca lê nem envia DM, e isso precisa estar no texto e no vídeo | texto a escrever |
+
+Dica: peça só as permissões que o app usa. O código também pede `instagram_business_basic` ao **promoter** (verificação opcional do @), mas o login do Instagram só aceita contas profissionais e a maioria dos promoters tem conta pessoal. Para o App Review, o mais seguro é tirar essa verificação da tela ou deixá-la fora do pedido.
+
+### Etapa 3: para operar como SaaS
+
+- **E-mail transacional** (Resend, Postmark, SES): base para recuperação de senha, confirmação de e-mail e convite por e-mail.
+- **Recuperação de senha** e **confirmação de e-mail**: não existem. Sem a primeira, todo esquecimento vira suporte manual.
+- **Cobrança**: planos e assinatura (Stripe, Asaas, Pagar.me). Hoje qualquer um se cadastra e usa de graça.
+- **Painel de administrador**: ver clientes, bloquear contas (o campo `is_active` existe, mas nada o altera) e acompanhar o uso.
+- **Hospedagem de produção**: Postgres gerenciado com backup automático, Redis, uploads em armazenamento de objetos (S3, R2) em vez do disco do servidor, e o worker como serviço separado.
+- **Monitoramento**: captura de erros (Sentry) e alerta quando o worker parar ou um webhook for descartado após 5 tentativas (hoje só vai para o log).
+- **Produto**: botão "Ver story" no feed da campanha; estorno quando o promoter apagar o comentário depois de pontuar (hoje não há); limpeza periódica de sessões expiradas e notificações antigas.
+
+## Segurança
+
+### O que já está bom (e testado)
+
+- Senhas com Argon2id; login em tempo constante para e-mail desconhecido.
+- Sessão em cookies `HttpOnly`: token de acesso de 15 minutos e token de renovação com rotação. Reuso de um token já rotacionado revoga a sessão inteira. Logout e troca de senha invalidam a sessão na hora, e a checagem de revogação falha fechada se o Redis cair.
+- Proteção contra CSRF por cabeçalho próprio e conferência de origem.
+- Avisos da Meta validados por assinatura antes de qualquer processamento; o payload é reduzido ao mínimo antes de entrar na fila (texto de DM nunca é guardado).
+- `signed_request` de desautorização e exclusão de dados validado por HMAC.
+- Tokens do Instagram cifrados no banco (Fernet), nunca devolvidos pela API nem escritos em log.
+- Isolamento por organização: recurso de outra equipe responde "não encontrado".
+- Limite de requisições no login, cadastro, renovação, convite, resgate, upload e simulador, com reserva em memória se o Redis cair.
+- Corpo de requisição limitado enquanto é recebido; imagens enviadas são decodificadas e regravadas como JPEG, sem metadados.
+- Cabeçalhos de segurança em toda resposta (CSP, `nosniff`, `X-Frame-Options`, HSTS com HTTPS); CSP com nonce no frontend; contêineres sem usuário root.
+- Em produção o app **recusa subir** com modo simulado, cookies inseguros, segredos padrão ou dados de demonstração. Sem `ENVIRONMENT` definido, o padrão é `production`: esquecer a variável no deploy não pula essa trava.
+
+### O que falta (em ordem de prioridade)
+
+1. **Exclusão de dados e de conta** (LGPD e Meta), descrita na Etapa 2.
+2. **Defesa em profundidade no banco**: o isolamento entre equipes depende só do `where` de cada consulta. Uma consulta esquecida vaza dados de outro cliente. Row Level Security no Postgres, como no Camarim, fecha essa porta.
+3. **Política de retenção**: comentários, @ e links de story ficam para sempre. Definir prazo (por exemplo, 12 meses após o fim da campanha) e apagar automaticamente.
+4. **Disputa de @**: quem se cadastra primeiro com um @ fica com ele. A aprovação manual do gestor impede o roubo de pontos, mas o dono real do @ não consegue se cadastrar e não há caminho para resolver.
+5. **Backups e rotação de segredos**: rotacionar `TOKEN_ENCRYPTION_KEY` hoje exige reconectar todas as contas (não há suporte a duas chaves ao mesmo tempo).
+6. **Health check de prontidão**: `/health` responde "ok" mesmo com banco ou Redis fora; o orquestrador não percebe a falha.
 
 ## Estrutura do projeto
 
@@ -123,7 +182,7 @@ compose.yaml / compose.dev.yaml   stack completa e variação de desenvolvimento
 .env.example                      modelo das variáveis de ambiente (o .env não é versionado)
 backend/                          API em FastAPI, migrações, testes
 frontend/                         site em Next.js
-design/                           guia visual e tokens de cor e tipografia
+design/                           design system (os tokens moram em frontend/src/app/globals.css)
 docs/META.md                      guia para conectar e aprovar na Meta
 docs/ARCHITECTURE.md              contrato técnico entre backend e frontend (em inglês)
 docs/openapi.json                 esquema da API gerado pelo backend
@@ -146,7 +205,7 @@ docker compose -f compose.yaml -f compose.dev.yaml run --rm tests
 docker compose -f compose.yaml -f compose.dev.yaml run --rm tests ruff check .
 ```
 
-A suíte tem 108 testes: autenticação, isolamento entre organizações, regras de pontuação, concorrência, resgates, webhooks e uploads. O frontend não tem testes automatizados; os fluxos de tela foram verificados manualmente em navegador. Veja [frontend/README.md](frontend/README.md).
+A suíte tem 109 testes: autenticação, isolamento entre organizações, regras de pontuação, concorrência, resgates, webhooks e uploads. O frontend não tem testes automatizados; os fluxos de tela foram verificados manualmente em navegador. Veja [frontend/README.md](frontend/README.md).
 
 ## Colocando em produção
 
@@ -166,7 +225,7 @@ META_WEBHOOK_VERIFY_TOKEN=...
 SEED_DEMO=false
 ```
 
-Em produção o app **recusa subir** com modo simulado ligado, cookies inseguros, segredos vazios ou dados de demonstração.
+Em produção o app **recusa subir** com modo simulado ligado, cookies inseguros, segredos vazios ou dados de demonstração. Sem `ENVIRONMENT` definido o padrão já é `production`; o `.env.example` declara `development` para o uso local.
 
 Coloque um proxy HTTPS (Caddy, Nginx, Traefik) na frente do frontend, na porta 3000.
 
@@ -178,18 +237,8 @@ Outros pontos:
 - Postgres e Redis não são publicados fora da rede do Docker.
 - Publicar posts pelo app exige endereço público: a Meta baixa a imagem pela internet.
 
-## Segurança (resumo)
-
-- Senhas com Argon2id.
-- Sessão em cookies `HttpOnly`: token de acesso de 15 minutos e token de renovação com rotação. Logout e troca de senha invalidam a sessão na hora.
-- Proteção contra CSRF por cabeçalho próprio e conferência de origem.
-- Avisos da Meta validados por assinatura antes de qualquer processamento.
-- Tokens do Instagram cifrados no banco, nunca devolvidos pela API nem escritos em log.
-- Isolamento por organização: recurso de outra equipe responde "não encontrado".
-- Limite de requisições no login, cadastro, resgate e upload.
-- Imagens enviadas são decodificadas e regravadas como JPEG.
-- Política de segurança de conteúdo (CSP) com nonce no frontend; contêineres sem usuário root.
-
 ## Como foi construído
 
 O código foi escrito por agentes de IA e revisado: o backend e o frontend por agentes Claude Sonnet, o design e a revisão de segurança do backend pelo Codex (ChatGPT), com orquestração e verificação final pelo Claude Opus. A revisão do backend apontou 22 problemas, todos corrigidos com teste. O frontend não passou pela revisão do Codex; foi revisado pelo orquestrador.
+
+O visual foi refeito depois com o design system do Camarim ("Noite / Lima / Violeta"): tokens, materiais, tipografia, cascas e telas de entrada.

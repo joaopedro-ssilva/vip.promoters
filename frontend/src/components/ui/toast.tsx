@@ -96,7 +96,7 @@ function ToastView({ item, onDismiss }: { item: ToastItem; onDismiss: () => void
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
       className={cn(
-        "pointer-events-auto flex w-[min(24rem,calc(100vw-2rem))] items-start gap-3 rounded-card border border-l-[3px] border-line bg-surface p-4 text-ink shadow-popover animate-enter",
+        "pointer-events-auto flex w-[min(24rem,calc(100vw-2rem))] items-start gap-3 rounded-[1rem] border border-l-[3px] border-line-subtle bg-surface-raised p-4 text-ink shadow-popover animate-enter",
         border,
       )}
     >
