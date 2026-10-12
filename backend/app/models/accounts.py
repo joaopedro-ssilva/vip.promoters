@@ -116,7 +116,9 @@ class PromoterProfile(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
     )
-    instagram_username: Mapped[str] = mapped_column(String(30), unique=True)
+    # NULL so enquanto o promoter disputa um @ que outra pessoa cadastrou (ver
+    # app/services/verification.py): sem @, nada pontua.
+    instagram_username: Mapped[str | None] = mapped_column(String(30), unique=True)
     ig_scoped_id: Mapped[str | None] = mapped_column(String(64), index=True)
     verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

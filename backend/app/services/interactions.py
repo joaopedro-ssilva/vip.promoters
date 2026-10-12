@@ -27,6 +27,7 @@ from app.models.base import (
     InteractionType,
     TxType,
 )
+from app.services import verification
 from app.services.instagram import get_instagram_client
 from app.services.instagram.base import (
     InstagramAuthError,
@@ -394,9 +395,15 @@ async def _process(db: AsyncSession, ev: InboundEvent) -> PipelineResult:
 async def _process_comment(
     db: AsyncSession, ev: InboundEvent, account: InstagramAccount, org: Organization
 ) -> PipelineResult:
+    username = normalize_username(ev.from_username)
+    code = verification.find_code(ev.text)
+    if code is not None:
+        # Comentario de verificacao do @ (em qualquer post da conta): prova de posse, nao
+        # participacao. Nunca pontua e nao e guardado.
+        await verification.confirm_by_comment(db, code, username, ev.from_id)
+        return PipelineResult("dropped")
     if ev.parent_id or not ev.media_id:
         return PipelineResult("dropped")
-    username = normalize_username(ev.from_username)
     if (ev.from_id and ev.from_id == account.ig_user_id) or (
         username and username == account.username.lower()
     ):

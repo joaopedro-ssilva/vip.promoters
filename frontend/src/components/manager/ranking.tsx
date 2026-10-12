@@ -25,7 +25,7 @@ export function ManagerRanking() {
 
   const all = q.data?.items ?? [];
   const term = search.trim().toLowerCase();
-  const filtered = term ? all.filter((e) => e.name.toLowerCase().includes(term) || e.instagram_username.toLowerCase().includes(term)) : all;
+  const filtered = term ? all.filter((e) => e.name.toLowerCase().includes(term) || (e.instagram_username ?? "").toLowerCase().includes(term)) : all;
   const page = filtered.slice(offset, offset + PAGE);
 
   return (

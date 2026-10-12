@@ -53,6 +53,8 @@ interface AuthContextValue {
   refetch: () => void;
   setUser: (u: User | null) => void;
   logout: () => Promise<void>;
+  /** Clears local state after the account was deleted server side (no API call). */
+  forgetSession: (to: string) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -101,6 +103,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.replace("/entrar");
   }, [resetClientState, router]);
 
+  const forgetSession = useCallback(
+    (to: string) => {
+      resetClientState();
+      router.replace(to);
+    },
+    [resetClientState, router],
+  );
+
   const value = useMemo<AuthContextValue>(() => {
     const user = q.data ?? null;
     const status: AuthContextValue["status"] = q.isPending
@@ -110,8 +120,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         : user
           ? "authenticated"
           : "anonymous";
-    return { user, status, refetch: () => void q.refetch(), setUser, logout };
-  }, [q, setUser, logout]);
+    return { user, status, refetch: () => void q.refetch(), setUser, logout, forgetSession };
+  }, [q, setUser, logout, forgetSession]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

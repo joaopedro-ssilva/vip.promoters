@@ -296,6 +296,7 @@ async def end_campaign(db: AsyncSession, org: Organization, campaign_id: uuid.UU
     if campaign.status != CampaignStatus.active.value:
         raise AppError(400, "campaign_not_active", "A campanha não está ativa.")
     campaign.status = CampaignStatus.ended.value
+    campaign.ended_at = datetime.now(UTC)
     await db.commit()
     return campaign
 

@@ -65,7 +65,7 @@ from app.core.redis import get_redis  # noqa: E402
 from app.main import app  # noqa: E402
 
 TABLES = (
-    "notifications, point_transactions, redemptions, rewards, interactions, campaigns, "
+    "username_claims, data_deletion_requests, notifications, point_transactions, redemptions, rewards, interactions, campaigns, "
     "memberships, promoter_profiles, instagram_accounts, organizations, refresh_tokens, users"
 )
 

@@ -142,7 +142,7 @@ class SecurityHeadersMiddleware:
         try:
             await self.app(scope, receive, send_wrapper)
         finally:
-            if path != "/api/v1/health":
+            if not path.startswith("/api/v1/health"):
                 access_log.info(
                     "request",
                     extra={

@@ -8,11 +8,13 @@ from app.models.accounts import (
 )
 from app.models.base import Base
 from app.models.campaigns import Campaign, Interaction
+from app.models.privacy import DataDeletionRequest, UsernameClaim
 from app.models.shop import Notification, PointTransaction, Redemption, Reward
 
 __all__ = [
     "Base",
     "Campaign",
+    "DataDeletionRequest",
     "InstagramAccount",
     "Interaction",
     "Membership",
@@ -24,4 +26,5 @@ __all__ = [
     "RefreshToken",
     "Reward",
     "User",
+    "UsernameClaim",
 ]

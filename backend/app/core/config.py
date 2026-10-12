@@ -27,7 +27,12 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://vip:vip@db:5432/vip"
     redis_url: str = "redis://redis:6379/0"
     secret_key: str = DEFAULT_SECRET_KEY
+    # Rotacao: chaves ANTERIORES (separadas por virgula) ainda aceitas na leitura. O
+    # SECRET_KEY novo assina; os antigos so validam tokens emitidos antes da troca. O
+    # TOKEN_ENCRYPTION_KEY novo cifra; os antigos so decifram, e o worker recifra tudo.
+    secret_key_previous: str = ""
     token_encryption_key: str = DEFAULT_TOKEN_ENCRYPTION_KEY
+    token_encryption_key_previous: str = ""
     cookie_secure: bool = False
     access_token_minutes: int = 15
     refresh_token_days: int = 30
@@ -36,6 +41,9 @@ class Settings(BaseSettings):
     meta_app_secret: str = ""
     meta_graph_version: str = "v25.0"
     meta_webhook_verify_token: str = DEFAULT_VERIFY_TOKEN
+    # Chave que assina X-Hub-Signature-256 e signed_request, se for diferente de
+    # META_APP_SECRET (no login do Instagram o painel mostra duas chaves).
+    meta_webhook_secret: str = ""
     sync_interval_seconds: int = 120
     seed_demo: bool = False
 
@@ -49,6 +57,12 @@ class Settings(BaseSettings):
     db_max_overflow: int = 20
     instagram_media_cache_seconds: int = 60
     log_level: str = "INFO"
+
+    # Retencao (dias). Interacoes de campanhas encerradas ha mais de RETENTION_DAYS sao
+    # anonimizadas (texto, @, id do Instagram e link do story apagados; pontos e extrato
+    # ficam). 0 desliga. Notificacoes lidas e sessoes expiradas tambem sao limpas.
+    retention_days: int = 365
+    notification_retention_days: int = 90
 
     # Limites "tentativas/janela_em_segundos". Em desenvolvimento sao multiplicados
     # por rate_limit_multiplier (0 = automatico: 100 em dev, 1 em producao).
@@ -92,6 +106,8 @@ class Settings(BaseSettings):
         Sem META_APP_SECRET (modo mock) usa-se um segredo de desenvolvimento derivado
         de SECRET_KEY: a verificacao nunca e ignorada.
         """
+        if self.meta_webhook_secret:
+            return self.meta_webhook_secret
         if self.meta_app_secret:
             return self.meta_app_secret
         if self.meta_mock_mode:
@@ -99,6 +115,17 @@ class Settings(BaseSettings):
                 self.secret_key.encode(), b"dev-webhook-secret", hashlib.sha256
             ).hexdigest()
         return ""
+
+    @property
+    def secret_keys(self) -> list[str]:
+        """Chave atual primeiro, depois as anteriores (so para validar)."""
+        old = [k.strip() for k in self.secret_key_previous.split(",") if k.strip()]
+        return [self.secret_key, *old]
+
+    @property
+    def encryption_keys(self) -> list[str]:
+        old = [k.strip() for k in self.token_encryption_key_previous.split(",") if k.strip()]
+        return [self.token_encryption_key, *old]
 
     def rate_limit(self, name: str) -> tuple[int, int]:
         raw = getattr(self, f"rl_{name}")
@@ -123,6 +150,11 @@ def validate_production(s: Settings) -> None:
         problems.append("SECRET_KEY ausente, padrao ou curta (minimo 32 caracteres)")
     if s.token_encryption_key in ("", DEFAULT_TOKEN_ENCRYPTION_KEY):
         problems.append("TOKEN_ENCRYPTION_KEY ausente ou padrao")
+    if (
+        DEFAULT_SECRET_KEY in s.secret_keys[1:]
+        or DEFAULT_TOKEN_ENCRYPTION_KEY in s.encryption_keys[1:]
+    ):
+        problems.append("chave padrao de desenvolvimento listada como chave anterior")
     if s.meta_webhook_verify_token in ("", DEFAULT_VERIFY_TOKEN):
         problems.append("META_WEBHOOK_VERIFY_TOKEN ausente ou padrao")
     if s.meta_mock_mode:

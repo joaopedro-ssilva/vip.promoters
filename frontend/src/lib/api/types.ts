@@ -20,9 +20,19 @@ export interface OrganizationPreview {
 }
 
 export interface PromoterProfile {
-  instagram_username: string;
+  /** null while the promoter is proving ownership of a disputed @ */
+  instagram_username: string | null;
   verified: boolean;
-  verification_method: "oauth" | null;
+  verification_method: "oauth" | "comment" | null;
+}
+
+/** @ ownership check: comment `code` on any post of an account connected to the app. */
+export interface Verification {
+  instagram_username: string | null;
+  verified: boolean;
+  claim_username: string | null;
+  code: string | null;
+  expires_at: string | null;
 }
 
 export interface User {
@@ -77,7 +87,7 @@ export interface Member {
     id: string;
     name: string;
     email: string;
-    instagram_username: string;
+    instagram_username: string | null;
     verified: boolean;
   };
 }
@@ -197,7 +207,7 @@ export interface Redemption {
   created_at: string;
   resolved_at: string | null;
   reward: { id: string; name: string; image_url: string | null };
-  promoter?: { membership_id: string; name: string; instagram_username: string } | null;
+  promoter?: { membership_id: string; name: string; instagram_username: string | null } | null;
   organization_name?: string | null;
 }
 
@@ -226,7 +236,7 @@ export interface LeaderboardEntry {
   rank: number;
   membership_id: string;
   name: string;
-  instagram_username: string;
+  instagram_username: string | null;
   points: number;
 }
 

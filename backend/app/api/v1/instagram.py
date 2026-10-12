@@ -9,6 +9,7 @@ from sqlalchemy import select
 from app.api.deps import DB, CurrentUser, Manager
 from app.core.config import settings
 from app.core.crypto import encrypt
+from app.core.errors import AppError
 from app.core.security import (
     ACCESS_COOKIE,
     OAUTH_COOKIE_PATH,
@@ -38,7 +39,6 @@ MANAGER_SCOPES = [
     "instagram_business_manage_messages",
     "instagram_business_content_publish",
 ]
-PROMOTER_SCOPES = ["instagram_business_basic"]
 
 
 def _account_out(a: InstagramAccount) -> InstagramAccountOut:
@@ -74,9 +74,14 @@ async def connect(user: CurrentUser, db: DB, response: Response):
         hint = re.sub(r"[^a-z0-9._]", "", org.name.lower().replace(" ", "")) or "conta.demo"
         scopes = MANAGER_SCOPES
     else:
-        profile = await db.get(PromoterProfile, user.id)
-        hint = profile.instagram_username if profile else "promoter"
-        scopes = PROMOTER_SCOPES
+        # A verificacao do promoter e por codigo em comentario (POST
+        # /promoter/verification): o login do Instagram so aceita conta profissional e pedir
+        # permissao a promoter aumentaria o escopo do App Review sem necessidade.
+        raise AppError(
+            400,
+            "use_comment_verification",
+            "Para verificar seu @, use o código de verificação no seu perfil.",
+        )
     state = sign_state(user.id)
     url = get_instagram_client().authorize_url(state, settings.redirect_uri, scopes, hint[:30])
     response.set_cookie(

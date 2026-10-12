@@ -13,7 +13,7 @@ import { useToast } from "@/components/ui/toast";
 import { ApiError, errorMessage } from "@/lib/api/client";
 import { redemptionsApi } from "@/lib/api/manager";
 import type { Redemption, RedemptionStatus } from "@/lib/api/types";
-import { formatDateTime, formatNumber, formatPoints } from "@/lib/format";
+import { formatDateTime, formatNumber, formatPoints, atHandle } from "@/lib/format";
 import { keys } from "@/lib/queries";
 
 const PAGE = 20;
@@ -157,7 +157,7 @@ export function RedemptionsPage() {
                     </td>
                     <td className="px-4 py-3 text-label [overflow-wrap:anywhere]">
                       {r.promoter?.name ?? "—"}
-                      {r.promoter && <span className="block text-caption font-normal text-ink-muted">@{r.promoter.instagram_username}</span>}
+                      {r.promoter && <span className="block text-caption font-normal text-ink-muted">{atHandle(r.promoter.instagram_username)}</span>}
                     </td>
                     <td className="px-4 py-3 text-label font-normal [overflow-wrap:anywhere]">{r.reward.name}</td>
                     <td className="px-4 py-3 text-right text-label tabular-nums">{formatPoints(r.cost_points)}</td>
@@ -186,7 +186,7 @@ export function RedemptionsPage() {
                 </div>
                 <p className="mt-2 text-body font-bold [overflow-wrap:anywhere]">{r.reward.name}</p>
                 <p className="text-label font-normal text-ink-secondary [overflow-wrap:anywhere]">
-                  {r.promoter?.name ?? "—"} {r.promoter && `(@${r.promoter.instagram_username})`}
+                  {r.promoter?.name ?? "—"} {r.promoter && `(${atHandle(r.promoter.instagram_username)})`}
                 </p>
                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-ink-muted tabular-nums">
                   <PointsChip muted>{formatPoints(r.cost_points)}</PointsChip>
@@ -297,7 +297,7 @@ function ActionForm({
         <div>
           <dt className="text-caption text-ink-muted">Pessoa</dt>
           <dd className="[overflow-wrap:anywhere]">
-            {item.promoter ? `${item.promoter.name} (@${item.promoter.instagram_username})` : "—"}
+            {item.promoter ? `${item.promoter.name} (${atHandle(item.promoter.instagram_username)})` : "—"}
           </dd>
         </div>
         <div>

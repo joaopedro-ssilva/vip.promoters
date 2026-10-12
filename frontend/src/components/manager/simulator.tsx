@@ -28,7 +28,8 @@ export function Simulator({ campaignId }: { campaignId: string }) {
   const [text, setText] = useState("Bora! 🔥");
   const [error, setError] = useState<string | null>(null);
 
-  const items = members.data?.items ?? [];
+  // promoters still proving a disputed @ have none to simulate with
+  const items = (members.data?.items ?? []).filter((m) => m.promoter.instagram_username);
   const useFree = pick === FREE || (items.length === 0 && !members.isPending);
   const username = normalizeIgUsername(useFree ? free : pick || items[0]?.promoter.instagram_username || "");
 
@@ -81,7 +82,7 @@ export function Simulator({ campaignId }: { campaignId: string }) {
           aria-busy={members.isPending}
         >
           {items.map((m) => (
-            <option key={m.id} value={m.promoter.instagram_username}>
+            <option key={m.id} value={m.promoter.instagram_username ?? ""}>
               {m.promoter.name} (@{m.promoter.instagram_username})
             </option>
           ))}

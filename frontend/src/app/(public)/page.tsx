@@ -35,9 +35,15 @@ const FOR_PROMOTERS = [
   { icon: Trophy, text: "Benefícios para trocar pelos pontos que você ganhou." },
 ];
 
-export default function LandingPage() {
+export default async function LandingPage({ searchParams }: { searchParams: Promise<{ conta?: string }> }) {
+  const { conta } = await searchParams;
   return (
     <>
+      {conta === "excluida" && (
+        <p role="status" className="mx-auto mt-6 w-[calc(100%-2rem)] max-w-site rounded-control border border-accent-border bg-accent-soft px-4 py-3 text-label text-success">
+          Sua conta foi excluída, junto com os seus dados pessoais.
+        </p>
+      )}
       <section className="mx-auto grid w-full max-w-site grid-cols-1 gap-8 px-4 py-12 md:px-6 lg:grid-cols-12 lg:gap-12 lg:px-8 lg:py-20">
         <div className="min-w-0 lg:col-span-7">
           <p className="site-sobrancelha mb-5 flex items-center gap-3 text-violet"><span aria-hidden="true" className="h-px w-8 bg-current" />Divulgação que vira benefício</p>

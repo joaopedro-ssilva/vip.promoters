@@ -66,6 +66,8 @@ class Campaign(Base):
     points_story_mention: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     max_story_mentions: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     dispatched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # quando a campanha encerrou (manual ou pelo prazo): base da politica de retencao
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     publish_container_id: Mapped[str | None] = mapped_column(String(64))
     publish_container_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

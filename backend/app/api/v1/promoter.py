@@ -22,6 +22,7 @@ from app.models import (
 )
 from app.schemas.common import Page
 from app.schemas.models import (
+    ClaimIn,
     JoinIn,
     LeaderboardEntryOut,
     MembershipListOut,
@@ -39,9 +40,11 @@ from app.schemas.models import (
     RedemptionOut,
     TransactionOut,
     UserEnvelope,
+    VerificationOut,
 )
 from app.services import leaderboard as lb
 from app.services import rewards as rewards_svc
+from app.services import verification
 from app.services.notifications import notify
 from app.services.views import (
     interaction_out,
@@ -195,7 +198,8 @@ async def patch_profile(body: ProfilePatchIn, user: Promoter, db: DB):
             raise AppError(
                 409, "instagram_username_taken", "Este @ do Instagram já está cadastrado."
             )
-        old = profile.instagram_username
+        old = profile.instagram_username or "(sem @)"
+        await verification.cancel_claims(db, user.id)
         profile.instagram_username = body.instagram_username
         profile.verified = False
         profile.verified_at = None
@@ -232,6 +236,49 @@ async def patch_profile(body: ProfilePatchIn, user: Promoter, db: DB):
                 409, "instagram_username_taken", "Este @ do Instagram já está cadastrado."
             ) from None
     return UserEnvelope(user=await user_out(db, user))
+
+
+# ------------------------------------------------------------------ verificacao do @
+
+
+async def _verification_out(db, user) -> VerificationOut:
+    profile = await db.get(PromoterProfile, user.id)
+    claim = await verification.pending_claim(db, user.id)
+    return VerificationOut(
+        instagram_username=profile.instagram_username if profile else None,
+        verified=bool(profile and profile.verified),
+        claim_username=claim.instagram_username if claim else None,
+        code=claim.code if claim else None,
+        expires_at=claim.expires_at if claim else None,
+    )
+
+
+@router.get("/promoter/verification", response_model=VerificationOut)
+async def get_verification(user: Promoter, db: DB):
+    return await _verification_out(db, user)
+
+
+@router.post("/promoter/verification", response_model=VerificationOut)
+async def start_verification(user: Promoter, db: DB):
+    """Gera o codigo para verificar o PROPRIO @ (comentar em qualquer post de uma conta
+    conectada ao app)."""
+    await check_rate_limit("invite", f"user:{user.id}")
+    profile = await db.get(PromoterProfile, user.id)
+    if profile is None or not profile.instagram_username:
+        raise AppError(400, "no_username", "Cadastre seu @ do Instagram primeiro.")
+    await verification.start_claim(db, user.id, profile.instagram_username)
+    await db.commit()
+    return await _verification_out(db, user)
+
+
+@router.post("/promoter/username-claims", response_model=VerificationOut)
+async def claim_username(body: ClaimIn, user: Promoter, db: DB):
+    """Disputa: pede um @ que outra pessoa cadastrou sem verificar. O @ so muda de dono
+    quando o codigo chega num comentario feito por esse @."""
+    await check_rate_limit("invite", f"user:{user.id}")
+    await verification.start_claim(db, user.id, body.instagram_username)
+    await db.commit()
+    return await _verification_out(db, user)
 
 
 # ------------------------------------------------------------------ campanhas

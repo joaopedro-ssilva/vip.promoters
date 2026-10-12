@@ -150,6 +150,14 @@ async def _load_for_update(db, org_id: uuid.UUID, member_id: uuid.UUID) -> Membe
 @router.post("/team/members/{member_id}/approve", response_model=MemberOut)
 async def approve_member(member_id: uuid.UUID, ctx: Manager, db: DB):
     m = await _load_for_update(db, ctx.org.id, member_id)
+    if not await db.scalar(
+        select(PromoterProfile.instagram_username).where(PromoterProfile.user_id == m.promoter_id)
+    ):
+        raise AppError(
+            400,
+            "promoter_without_username",
+            "Este promoter está verificando o @ dele. Aprove depois que o @ aparecer.",
+        )
     newly = m.status != "approved" or m.approved_by is None
     was_approved = m.status == "approved"
     if newly:

@@ -67,19 +67,29 @@ def create_access_token(user_id: uuid.UUID, role: str, sid: uuid.UUID) -> str:
 
 
 def decode_access_token(token: str) -> tuple[uuid.UUID, uuid.UUID] | None:
-    """Devolve (user_id, sid) ou None. Tokens sem sid sao rejeitados."""
-    try:
-        claims = jwt.decode(
-            token,
-            settings.secret_key,
-            algorithms=["HS256"],
-            options={"require": ["exp", "sub", "typ", "sid"]},
-        )
-        if claims.get("typ") != "access":
+    """Devolve (user_id, sid) ou None. Tokens sem sid sao rejeitados.
+
+    Aceita tokens assinados com SECRET_KEY ou com uma chave de SECRET_KEY_PREVIOUS (rotacao
+    sem derrubar quem esta logado; o access token vive 15 minutos)."""
+    for key in settings.secret_keys:
+        try:
+            claims = jwt.decode(
+                token,
+                key,
+                algorithms=["HS256"],
+                options={"require": ["exp", "sub", "typ", "sid"]},
+            )
+        except jwt.InvalidSignatureError:
+            continue
+        except (jwt.PyJWTError, ValueError):
             return None
-        return uuid.UUID(claims["sub"]), uuid.UUID(claims["sid"])
-    except (jwt.PyJWTError, ValueError):
-        return None
+        try:
+            if claims.get("typ") != "access":
+                return None
+            return uuid.UUID(claims["sub"]), uuid.UUID(claims["sid"])
+        except (KeyError, ValueError):
+            return None
+    return None
 
 
 # ---------------------------------------------------------------- refresh opaco
@@ -97,9 +107,9 @@ def new_refresh_token() -> tuple[str, str]:
 # ---------------------------------------------------------------- state OAuth
 
 
-def _state_sig(payload: str) -> str:
+def _state_sig(payload: str, key: str | None = None) -> str:
     return hmac.new(
-        settings.secret_key.encode(), f"oauth-state:{payload}".encode(), hashlib.sha256
+        (key or settings.secret_key).encode(), f"oauth-state:{payload}".encode(), hashlib.sha256
     ).hexdigest()
 
 
@@ -112,7 +122,7 @@ def verify_state(state: str) -> uuid.UUID | None:
     try:
         uid, exp, nonce, sig = state.split(":")
         payload = f"{uid}:{exp}:{nonce}"
-        if not hmac.compare_digest(sig, _state_sig(payload)):
+        if not any(hmac.compare_digest(sig, _state_sig(payload, k)) for k in settings.secret_keys):
             return None
         if int(exp) < time.time():
             return None

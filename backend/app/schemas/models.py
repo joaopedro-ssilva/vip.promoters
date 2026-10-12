@@ -50,6 +50,9 @@ class RegisterIn(Strict):
     organization_name: PersonName | None = None
     instagram_username: IGUsername | None = None
     invite_code: InviteCode | None = None
+    # O @ ja foi cadastrado por outra pessoa sem verificacao e quem se cadastra diz que e
+    # dono: a conta nasce sem @ e com um pedido de verificacao (disputa).
+    claim_username: bool = False
 
 
 class LoginIn(Strict):
@@ -64,6 +67,12 @@ class PatchMeIn(Strict):
 class ChangePasswordIn(Strict):
     current_password: LoginPassword
     new_password: Password
+
+
+class DeleteAccountIn(Strict):
+    password: LoginPassword
+    # o usuario digita EXCLUIR: evita exclusao por clique acidental
+    confirmation: Annotated[str, StringConstraints(max_length=20)]
 
 
 class OrganizationPatchIn(Strict):
@@ -215,9 +224,22 @@ class OrganizationPreviewOut(Out):
 
 
 class PromoterProfileOut(Out):
-    instagram_username: str
+    instagram_username: str | None
     verified: bool
     verification_method: str | None = None
+
+
+class ClaimIn(Strict):
+    instagram_username: IGUsername
+
+
+class VerificationOut(Out):
+    instagram_username: str | None
+    verified: bool
+    # pedido aberto: comentar `code` em qualquer post de uma conta conectada ao app
+    claim_username: str | None = None
+    code: str | None = None
+    expires_at: datetime | None = None
 
 
 class UserOut(Out):
