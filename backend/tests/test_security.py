@@ -259,6 +259,15 @@ def test_production_guard_rejects_insecure_config():
     validate_production(good)  # nao levanta
 
 
+def test_environment_defaults_to_production(monkeypatch):
+    """Sem ENVIRONMENT definido, a configuracao padrao (insegura) e recusada na subida."""
+    monkeypatch.delenv("ENVIRONMENT", raising=False)
+    defaults = Settings()
+    assert defaults.is_production
+    with pytest.raises(RuntimeError):
+        validate_production(defaults)
+
+
 async def test_dev_routes_and_docs_in_mock_mode(client):
     assert (await client.get(f"{API}/config")).json() == {
         "app_name": "VIP Promoters",

@@ -61,7 +61,7 @@ export function Popover({ label, trigger, children, align = "right", panelClassN
         aria-controls={open ? panelId : undefined}
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "relative grid min-h-11 min-w-11 place-items-center rounded-control border border-transparent text-ink-secondary hover:bg-surface-hover hover:text-ink active:bg-surface-raised",
+          "relative grid min-h-11 min-w-11 place-items-center rounded-control border border-transparent text-ink-secondary hover:bg-[var(--hover-veu)] hover:text-ink-strong",
           triggerClassName,
         )}
       >
@@ -71,7 +71,7 @@ export function Popover({ label, trigger, children, align = "right", panelClassN
         <div
           id={panelId}
           className={cn(
-            "fixed inset-x-4 top-[calc(var(--topbar-height)+0.5rem)] z-40 rounded-card border border-line bg-surface p-2 text-ink shadow-popover animate-enter",
+            "fixed inset-x-4 top-[calc(var(--topbar-height)+0.5rem)] z-40 rounded-[1rem] border border-line-subtle bg-surface-raised p-2 text-ink shadow-popover animate-enter",
             "sm:absolute sm:inset-x-auto sm:top-full sm:mt-2 sm:w-[22rem]",
             align === "right" ? "sm:right-0" : "sm:left-0",
             panelClassName,

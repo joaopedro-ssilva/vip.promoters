@@ -47,22 +47,21 @@ function Dashboard({ orgId, teamName }: { orgId: string; teamName: string }) {
   return (
     <div className="grid grid-cols-1 gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
       <div className="flex min-w-0 flex-col gap-6">
-        <section aria-labelledby="saldo" className="overflow-hidden rounded-card border border-line-subtle bg-surface">
-          <div aria-hidden="true" className="h-1 bg-accent" />
+        <section aria-labelledby="saldo" className="vidro overflow-hidden rounded-card">
           <div className="p-6">
-            <h2 id="saldo" className="font-sans text-label text-ink-secondary">
+            <h2 id="saldo" className="rotulo">
               Saldo disponível
             </h2>
-            <p className="mt-2 font-sans text-balance font-extrabold tabular-nums tracking-[-0.02em] text-accent [font-size:clamp(2rem,10vw,3rem)] [overflow-wrap:anywhere]">
+            <p className="cifra mt-3 text-balance text-success [overflow-wrap:anywhere]">
               {formatNumber(balance)}
             </p>
-            <p className="text-label text-ink-secondary">{balance === 1 ? "ponto" : "pontos"}</p>
+            <p className="mt-1 text-label font-normal text-ink-secondary">{balance === 1 ? "ponto" : "pontos"}</p>
             <Perforated className="my-4" />
             <div className="flex flex-wrap gap-x-4">
-              <Link href="/promoter/extrato" className="inline-flex min-h-11 items-center text-label text-accent underline">
+              <Link href="/promoter/extrato" className="inline-flex min-h-11 items-center text-label text-success hover:brightness-110">
                 Ver extrato
               </Link>
-              <Link href="/promoter/lojinha" className="inline-flex min-h-11 items-center text-label text-accent underline">
+              <Link href="/promoter/lojinha" className="inline-flex min-h-11 items-center text-label text-success hover:brightness-110">
                 Ir para a lojinha
               </Link>
             </div>
@@ -75,7 +74,7 @@ function Dashboard({ orgId, teamName }: { orgId: string; teamName: string }) {
         </section>
 
         <Card as="section" aria-labelledby="pos" className="md:p-6">
-          <h2 id="pos" className="font-sans text-label text-ink-secondary">
+          <h2 id="pos" className="rotulo">
             Sua posição · {teamName}
           </h2>
           <p className="mt-1 font-sans text-page font-extrabold tabular-nums tracking-[-0.02em]">
@@ -84,7 +83,7 @@ function Dashboard({ orgId, teamName }: { orgId: string; teamName: string }) {
           <p className="text-caption text-ink-muted tabular-nums">
             {d.rank ? `entre ${formatNumber(d.promoters_count)} ${d.promoters_count === 1 ? "promoter" : "promoters"} na equipe` : "A posição aparece com a primeira participação verificada."}
           </p>
-          <Link href="/promoter/ranking" className="mt-2 inline-flex min-h-11 items-center text-label text-accent underline">
+          <Link href="/promoter/ranking" className="mt-2 inline-flex min-h-11 items-center text-label text-success underline">
             Ver ranking
           </Link>
         </Card>
@@ -94,7 +93,7 @@ function Dashboard({ orgId, teamName }: { orgId: string; teamName: string }) {
         <section aria-labelledby="camp">
           <div className="mb-4 flex items-center justify-between gap-3">
             <SectionTitle id="camp">Campanhas ativas</SectionTitle>
-            <Link href="/promoter/campanhas" className="text-label text-accent underline">
+            <Link href="/promoter/campanhas" className="text-label text-success underline">
               Ver todas
             </Link>
           </div>
@@ -114,7 +113,7 @@ function Dashboard({ orgId, teamName }: { orgId: string; teamName: string }) {
         <section aria-labelledby="trans">
           <div className="mb-4 flex items-center justify-between gap-3">
             <SectionTitle id="trans">Últimos lançamentos</SectionTitle>
-            <Link href="/promoter/extrato" className="text-label text-accent underline">
+            <Link href="/promoter/extrato" className="text-label text-success underline">
               Ver extrato
             </Link>
           </div>

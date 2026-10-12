@@ -298,7 +298,7 @@ export function NewCampaign() {
 
           <Card as="section" aria-labelledby="sec-1">
             <h2 id="sec-1" className="mb-4 font-heading text-section">
-              <span className="mr-2 text-accent tabular-nums">01</span>Publicação
+              <span className="mr-2 text-success tabular-nums">01</span>Publicação
             </h2>
             <Tabs
               label="Origem da publicação"
@@ -378,7 +378,7 @@ export function NewCampaign() {
                             <span className="min-w-0 text-caption text-ink-muted tabular-nums">{formatDate(m.timestamp)}</span>
                             <span className="line-clamp-2 min-w-0 text-label font-normal text-ink-secondary">{m.caption || "Sem legenda"}</span>
                             {selected && (
-                              <span className="inline-flex items-center gap-1 text-caption text-accent">
+                              <span className="inline-flex items-center gap-1 text-caption text-success">
                                 <Check aria-hidden="true" strokeWidth={1.75} className="size-4" />
                                 Selecionado
                               </span>
@@ -459,7 +459,7 @@ export function NewCampaign() {
 
           <Card as="section" aria-labelledby="sec-2">
             <h2 id="sec-2" className="mb-4 font-heading text-section">
-              <span className="mr-2 text-accent tabular-nums">02</span>Pontos
+              <span className="mr-2 text-success tabular-nums">02</span>Pontos
             </h2>
             <div className="flex flex-col gap-6">
               <TextField label="Nome da campanha" error={e.title?.message} {...form.register("title")} />
@@ -516,7 +516,7 @@ export function NewCampaign() {
 
           <Card as="section" aria-labelledby="sec-3">
             <h2 id="sec-3" className="mb-1 font-heading text-section">
-              <span className="mr-2 text-accent tabular-nums">03</span>Período e envio
+              <span className="mr-2 text-success tabular-nums">03</span>Período e envio
             </h2>
             <p className="mb-4 text-label text-ink-secondary">Horário de Brasília.</p>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

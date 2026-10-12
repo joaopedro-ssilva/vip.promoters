@@ -133,9 +133,9 @@ export function RedemptionsPage() {
       ) : (
         <>
           <div className="hidden md:block" aria-busy={q.isFetching}>
-            <table className="w-full border-collapse overflow-hidden rounded-card border border-line-subtle text-left">
+            <table className="tabela-leitura solido w-full overflow-hidden rounded-card text-left">
               <caption className="sr-only">Resgates</caption>
-              <thead className="bg-surface-raised text-label text-ink-secondary">
+              <thead>
                 <tr>
                   <th scope="col" className="px-4 py-3 font-semibold">Código</th>
                   <th scope="col" className="px-4 py-3 font-semibold">Pessoa</th>
@@ -146,7 +146,7 @@ export function RedemptionsPage() {
                   <th scope="col" className="px-4 py-3 font-semibold">Ações</th>
                 </tr>
               </thead>
-              <tbody className="bg-surface">
+              <tbody>
                 {items.map((r) => (
                   <tr key={r.id} className="border-t border-line-subtle">
                     <td className="px-4 py-3">

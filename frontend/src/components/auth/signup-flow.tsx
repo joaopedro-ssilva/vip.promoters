@@ -83,11 +83,12 @@ export function SignupFlow() {
       <AuthCard
         width="form"
         eyebrow="Etapa 1 de 2"
-        title="Como você vai usar o VIP Promoters?"
+        title="Como você vai usar o"
+        highlight="VIP Promoters?"
         footer={
           <p className="text-label text-ink-secondary">
             Já tem conta?{" "}
-            <Link href="/entrar" className="text-accent underline">
+            <Link href="/entrar" className="text-success underline">
               Entrar
             </Link>
           </p>
@@ -114,11 +115,11 @@ export function SignupFlow() {
                     onChange={() => setRole(r)}
                     className="sr-only"
                   />
-                  <Icon aria-hidden="true" strokeWidth={1.75} className="size-6 text-accent" />
+                  <Icon aria-hidden="true" strokeWidth={1.75} className="size-6 text-success" />
                   <span className="text-body font-bold">{title}</span>
                   <span className="text-label font-normal text-ink-secondary">{text}</span>
                   {selected && (
-                    <span className="inline-flex items-center gap-1 text-caption text-accent">
+                    <span className="inline-flex items-center gap-1 text-caption text-success">
                       <Check aria-hidden="true" strokeWidth={1.75} className="size-4" />
                       Selecionado
                     </span>
@@ -173,12 +174,13 @@ function DetailsStep({ role, convite, next, onBack }: { role: Role; convite: str
   return (
     <AuthCard
       eyebrow="Etapa 2 de 2"
-      title="Criar conta"
+      title="Crie sua"
+      highlight="conta."
       description={role === "manager" ? "Conta de gestor" : "Conta de promoter"}
       footer={
         <p className="text-label text-ink-secondary">
           Já tem conta?{" "}
-          <Link href="/entrar" className="text-accent underline">
+          <Link href="/entrar" className="text-success underline">
             Entrar
           </Link>
         </p>

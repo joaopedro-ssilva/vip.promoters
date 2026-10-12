@@ -123,7 +123,7 @@ export function ManagerDashboard() {
             <section aria-labelledby="top-title">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <SectionTitle id="top-title">Top promoters</SectionTitle>
-                <Link href="/gestor/ranking" className="text-label text-accent underline">
+                <Link href="/gestor/ranking" className="text-label text-success underline">
                   Ver ranking
                 </Link>
               </div>

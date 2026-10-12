@@ -18,7 +18,10 @@ DEFAULT_VERIFY_TOKEN = "dev-verify-token"
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=None, extra="ignore")
 
-    environment: Literal["development", "production"] = "development"
+    # Padrao "production" de proposito: esquecer ENVIRONMENT no deploy nao pode pular a
+    # validate_production (o SECRET_KEY padrao e publico no repositorio e permitiria forjar
+    # tokens). Desenvolvimento e testes declaram ENVIRONMENT=development explicitamente.
+    environment: Literal["development", "production"] = "production"
     app_url: str = "http://localhost:3000"
     allowed_origins: str = "http://localhost:3000"
     database_url: str = "postgresql+asyncpg://vip:vip@db:5432/vip"

@@ -51,8 +51,8 @@ export function EmptyState({
       )}
     >
       {Icon && <Icon aria-hidden="true" strokeWidth={1.75} className="size-8 text-ink-muted" />}
-      <h3 className="font-heading text-section">{title}</h3>
-      {description && <p className="max-w-[40ch] text-body text-ink-secondary">{description}</p>}
+      <h3 className="text-section font-semibold text-ink-strong">{title}</h3>
+      {description && <p className="max-w-[44ch] text-label font-normal text-ink-muted">{description}</p>}
       {action && <div className="mt-2">{action}</div>}
     </div>
   );

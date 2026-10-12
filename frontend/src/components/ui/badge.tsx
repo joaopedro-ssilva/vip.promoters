@@ -30,21 +30,33 @@ export type BadgeKind =
   | "out_of_window"
   | "sold_out";
 
+// Tons do design system: lima = já valeu (pontuou, aprovado, cumprido);
+// violeta = ainda em jogo (campanha ativa, não identificado); âmbar = atenção
+// (pendente, duplicado); rosa = recusa e cancelamento; o resto fica neutro.
+const TONE = {
+  lima: "bg-accent-soft border-accent-border text-success",
+  violeta: "bg-violet-soft border-violet-border text-violet",
+  ambar: "bg-warning-soft border-warning-border text-warning",
+  rosa: "bg-danger-soft border-danger-border text-danger",
+  neutro: "bg-surface-raised border-line-subtle text-ink-secondary",
+  apagado: "bg-surface-raised border-line-subtle text-ink-muted",
+} as const;
+
 const MAP: Record<BadgeKind, { label: string; campaignLabel?: string; color: string; Icon: LucideIcon }> = {
-  pending: { label: "Pendente", color: "text-warning", Icon: Clock3 },
-  approved: { label: "Aprovado", color: "text-success", Icon: CircleCheck },
-  active: { label: "Ativo", campaignLabel: "Ativa", color: "text-accent", Icon: Radio },
-  ended: { label: "Encerrado", campaignLabel: "Encerrada", color: "text-ink-secondary", Icon: Flag },
-  draft: { label: "Rascunho", color: "text-ink-muted", Icon: FilePenLine },
-  awarded: { label: "Pontuou", color: "text-success", Icon: BadgeCheck },
-  duplicate: { label: "Duplicado", color: "text-warning", Icon: Copy },
-  unmatched: { label: "Não identificado", color: "text-info", Icon: UserRoundSearch },
-  fulfilled: { label: "Cumprido", color: "text-success", Icon: PackageCheck },
-  cancelled: { label: "Cancelado", color: "text-danger", Icon: CircleX },
-  rejected: { label: "Recusado", color: "text-danger", Icon: UserRoundX },
-  removed: { label: "Removido", color: "text-ink-secondary", Icon: UserRoundX },
-  out_of_window: { label: "Fora do período", color: "text-ink-muted", Icon: Clock3 },
-  sold_out: { label: "Esgotado", color: "text-ink-secondary", Icon: Flag },
+  pending: { label: "Pendente", color: TONE.ambar, Icon: Clock3 },
+  approved: { label: "Aprovado", color: TONE.lima, Icon: CircleCheck },
+  active: { label: "Ativo", campaignLabel: "Ativa", color: TONE.violeta, Icon: Radio },
+  ended: { label: "Encerrado", campaignLabel: "Encerrada", color: TONE.neutro, Icon: Flag },
+  draft: { label: "Rascunho", color: TONE.apagado, Icon: FilePenLine },
+  awarded: { label: "Pontuou", color: TONE.lima, Icon: BadgeCheck },
+  duplicate: { label: "Duplicado", color: TONE.ambar, Icon: Copy },
+  unmatched: { label: "Não identificado", color: TONE.violeta, Icon: UserRoundSearch },
+  fulfilled: { label: "Cumprido", color: TONE.lima, Icon: PackageCheck },
+  cancelled: { label: "Cancelado", color: TONE.rosa, Icon: CircleX },
+  rejected: { label: "Recusado", color: TONE.rosa, Icon: UserRoundX },
+  removed: { label: "Removido", color: TONE.neutro, Icon: UserRoundX },
+  out_of_window: { label: "Fora do período", color: TONE.apagado, Icon: Clock3 },
+  sold_out: { label: "Esgotado", color: TONE.neutro, Icon: Flag },
 };
 
 export function StatusBadge({
@@ -61,12 +73,12 @@ export function StatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex min-h-7 items-center gap-1 rounded-pill border border-line bg-surface-raised px-2 py-1 text-caption",
+        "inline-flex min-h-6 items-center gap-1.5 whitespace-nowrap rounded-pill border px-2.5 py-0.5 text-2xs font-semibold tracking-[0.04em]",
         color,
         className,
       )}
     >
-      <Icon aria-hidden="true" strokeWidth={1.75} className="size-4 shrink-0" />
+      <Icon aria-hidden="true" strokeWidth={2} className="size-3.5 shrink-0" />
       {campaign && campaignLabel ? campaignLabel : label}
     </span>
   );

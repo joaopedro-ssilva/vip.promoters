@@ -36,7 +36,7 @@ export function NotificationBell() {
           {unread > 0 && (
             <span
               aria-hidden="true"
-              className="absolute right-0.5 top-0.5 grid min-h-5 min-w-5 place-items-center rounded-pill bg-accent px-1 text-caption font-bold tabular-nums text-on-accent"
+              className="absolute right-0.5 top-0.5 grid min-h-5 min-w-5 place-items-center rounded-pill bg-accent px-1 text-2xs font-bold tabular-nums text-on-accent"
             >
               {unread > 99 ? "99+" : unread}
             </span>
@@ -92,7 +92,7 @@ function BellPanel() {
                   <>
                     <span className="flex items-start justify-between gap-2">
                       <span className="min-w-0 text-label text-ink">{n.title}</span>
-                      {isUnread && <span className="shrink-0 text-caption text-accent">Nova</span>}
+                      {isUnread && <span className="shrink-0 text-caption text-success">Nova</span>}
                     </span>
                     {n.body && <span className="mt-0.5 block text-label font-normal text-ink-secondary">{n.body}</span>}
                     <span className="mt-1 block text-caption text-ink-muted">{formatRelativeDay(n.created_at)}</span>

@@ -66,7 +66,7 @@ function CampaignCard({ c }: { c: Campaign }) {
         </div>
       </dl>
       <div className="mt-auto">
-        <Link href={`/gestor/campanhas/${c.id}`} className="inline-flex min-h-11 items-center text-label text-accent underline">
+        <Link href={`/gestor/campanhas/${c.id}`} className="inline-flex min-h-11 items-center text-label text-success underline">
           Ver campanha<span className="sr-only">: {c.title}</span>
         </Link>
       </div>

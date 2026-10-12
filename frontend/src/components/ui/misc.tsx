@@ -26,7 +26,7 @@ export function Card({
   ...rest
 }: HTMLAttributes<HTMLElement> & { as?: "div" | "section" | "article" | "li" }) {
   return (
-    <Tag className={cn("rounded-card border border-line-subtle bg-surface p-4 md:p-6", className)} {...rest}>
+    <Tag className={cn("solido rounded-card p-4 shadow-card md:p-6", className)} {...rest}>
       {children}
     </Tag>
   );
@@ -35,7 +35,7 @@ export function Card({
 /** Dense card for lists and rewards (16px padding). */
 export function DenseCard({ className, children, as: Tag = "div", ...rest }: HTMLAttributes<HTMLElement> & { as?: "div" | "article" | "li" }) {
   return (
-    <Tag className={cn("min-w-0 rounded-card border border-line-subtle bg-surface p-4", className)} {...rest}>
+    <Tag className={cn("solido min-w-0 rounded-card p-4", className)} {...rest}>
       {children}
     </Tag>
   );
@@ -61,10 +61,10 @@ export function PageHeader({
   return (
     <div className={cn("mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between", className)}>
       <div className="min-w-0">
-        <h1 tabIndex={-1} className="font-heading text-page lg:text-page-wide outline-none">
+        <h1 tabIndex={-1} className="display text-page font-bold text-ink-strong outline-none">
           {title}
         </h1>
-        {description && <p className="mt-2 max-w-[60ch] text-body text-ink-secondary">{description}</p>}
+        {description && <p className="mt-1.5 max-w-[60ch] text-label font-normal text-ink-muted">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-3 sm:shrink-0">{actions}</div>}
     </div>
@@ -73,7 +73,7 @@ export function PageHeader({
 
 export function SectionTitle({ children, id, className }: { children: ReactNode; id?: string; className?: string }) {
   return (
-    <h2 id={id} className={cn("font-heading text-section", className)}>
+    <h2 id={id} className={cn("text-section font-semibold text-ink-strong", className)}>
       {children}
     </h2>
   );
@@ -101,7 +101,7 @@ export function Avatar({
     <span
       aria-hidden="true"
       className={cn(
-        "relative inline-grid shrink-0 place-items-center overflow-hidden rounded-pill border border-line bg-surface-raised font-bold text-ink-secondary",
+        "relative inline-grid shrink-0 place-items-center overflow-hidden rounded-pill border border-violet-border bg-violet-soft font-bold tracking-[0.02em] text-violet",
         avatarSizes[size],
         className,
       )}
@@ -138,15 +138,15 @@ export function Kpi({
   loading?: boolean;
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-2 rounded-card border border-line-subtle bg-surface p-4 md:p-6">
+    <div className="vidro flex min-w-0 flex-col gap-3 rounded-card p-4 md:p-5">
       <div className="flex items-start justify-between gap-2">
-        <p className="min-w-0 text-label text-ink-secondary">{label}</p>
-        {Icon && <Icon aria-hidden="true" strokeWidth={1.75} className="size-5 shrink-0 text-ink-secondary" />}
+        <p className="rotulo min-w-0">{label}</p>
+        {Icon && <Icon aria-hidden="true" strokeWidth={1.75} className="size-4.5 shrink-0 text-ink-muted" />}
       </div>
       {loading ? (
         <Skeleton className="h-9 w-20" />
       ) : (
-        <p className="font-sans text-page font-extrabold tracking-[-0.02em] tabular-nums">
+        <p className="cifra text-page text-ink-strong">
           {value === null || value === undefined ? "—" : typeof value === "number" ? formatNumber(value) : value}
         </p>
       )}
@@ -161,8 +161,8 @@ export function PointsChip({ children, muted, className }: { children: ReactNode
   return (
     <span
       className={cn(
-        "inline-flex min-h-7 items-center gap-1 rounded-pill bg-surface-raised px-2 py-1 text-label tabular-nums",
-        muted ? "text-ink-secondary" : "text-accent",
+        "num inline-flex min-h-7 items-center gap-1 rounded-pill border px-2.5 py-1 text-label",
+        muted ? "border-line-subtle bg-surface-raised text-ink-secondary" : "border-accent-border bg-accent-soft text-success",
         className,
       )}
     >
@@ -255,7 +255,7 @@ export function FilterButtons<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div role="group" aria-label={label} className="flex flex-wrap gap-2">
+    <div role="group" aria-label={label} className="vidro-fino inline-flex w-fit max-w-full flex-wrap gap-1 rounded-control p-1">
       {options.map((o) => {
         const active = o.value === value;
         return (
@@ -265,10 +265,10 @@ export function FilterButtons<T extends string>({
             aria-pressed={active}
             onClick={() => onChange(o.value)}
             className={cn(
-              "min-h-11 rounded-control border px-4 text-label transition-colors duration-[var(--duration-fast)]",
+              "min-h-10 rounded-[0.5625rem] px-4 text-label transition-colors duration-[var(--duration-fast)]",
               active
-                ? "border-accent bg-surface-raised text-ink"
-                : "border-line bg-surface text-ink-secondary hover:bg-surface-hover hover:text-ink",
+                ? "segmento-ativo text-ink-strong"
+                : "text-ink-muted hover:text-ink",
             )}
           >
             {o.label}
@@ -328,10 +328,10 @@ export function Tabs<T extends string>({
               onKeyDown={(e) => onKey(e, i)}
               onClick={() => onChange(t.id)}
               className={cn(
-                "min-h-12 border-b-2 px-4 py-3 text-label transition-colors duration-[var(--duration-fast)]",
+                "-mb-px min-h-12 border-b-2 px-4 py-3 text-label transition-colors duration-[var(--duration-fast)]",
                 selected
-                  ? "border-accent text-ink"
-                  : "border-transparent text-ink-secondary hover:bg-surface-hover active:bg-surface-raised",
+                  ? "border-accent text-ink-strong"
+                  : "border-transparent text-ink-muted hover:text-ink",
               )}
             >
               {t.label}
@@ -366,7 +366,7 @@ export function Pagination({
   const to = Math.min(offset + limit, total);
   return (
     <nav aria-label="Paginação" className="mt-6 flex flex-wrap items-center justify-between gap-3">
-      <p className="text-label text-ink-secondary tabular-nums" aria-live="polite">
+      <p className="num text-label font-normal text-ink-muted" aria-live="polite">
         {busy ? "Atualizando…" : `${formatNumber(from)}–${formatNumber(to)} de ${formatNumber(total)}`}
       </p>
       <div className="flex gap-2">
@@ -392,8 +392,8 @@ export function DialogActions({ children }: { children: ReactNode }) {
 export function Pair({ label, children, className }: { label: string; children: ReactNode; className?: string }) {
   return (
     <div className={cn("min-w-0", className)}>
-      <dt className="text-caption text-ink-muted">{label}</dt>
-      <dd className="text-label font-medium text-ink tabular-nums">{children}</dd>
+      <dt className="rotulo">{label}</dt>
+      <dd className="num mt-0.5 text-label font-medium text-ink">{children}</dd>
     </div>
   );
 }

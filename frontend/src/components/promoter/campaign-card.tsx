@@ -42,7 +42,7 @@ export function Checklist({ c }: { c: PromoterCampaign }) {
                 {r.note ? ` · ${r.note}` : ""}
               </span>
             </span>
-            <span className="text-label tabular-nums text-accent">+{formatPoints(r.points)}</span>
+            <span className="text-label tabular-nums text-success">+{formatPoints(r.points)}</span>
           </li>
         ))}
       </ul>

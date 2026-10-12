@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
+import { Brand } from "@/components/layout/parts";
 import { cn } from "@/lib/cn";
 import { safeNext } from "@/lib/safe-url";
 import { homeFor, useAuth } from "./auth-provider";
@@ -17,8 +18,15 @@ export function useRedirectIfAuthed(next?: string | null) {
   }, [status, user, next, router]);
 }
 
+/**
+ * O cartão das telas de entrada (design system do Camarim, tela Entrar): vidro
+ * espesso sobre a luz de palco, a marca no alto e a frase de abertura em
+ * Instrument Serif — a serifada é a voz da PORTA, nunca do app. O trecho em
+ * `highlight` acende em itálico lima.
+ */
 export function AuthCard({
   title,
+  highlight,
   description,
   children,
   footer,
@@ -26,6 +34,7 @@ export function AuthCard({
   eyebrow,
 }: {
   title: string;
+  highlight?: string;
   description?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
@@ -33,16 +42,25 @@ export function AuthCard({
   eyebrow?: ReactNode;
 }) {
   return (
-    <div className={cn("mx-auto w-full px-4 py-12", width === "auth" ? "max-w-auth" : "max-w-form")}>
-      <div className="rounded-panel border border-line-subtle bg-surface p-4 md:p-6">
-        {eyebrow && <div className="mb-2 text-caption uppercase tracking-[0.08em] text-ink-muted">{eyebrow}</div>}
-        <h1 tabIndex={-1} className="font-heading text-page outline-none">
-          {title}
-        </h1>
-        {description && <p className="mt-2 text-body text-ink-secondary">{description}</p>}
-        <div className="mt-6">{children}</div>
+    <div className={cn("mx-auto w-full px-4 py-10 md:py-16", width === "auth" ? "max-w-auth" : "max-w-form")}>
+      <div className="cartao-de-entrada flex flex-col gap-5 px-6 pb-8 pt-9 sm:px-10">
+        <Brand withIcon />
+        <div className="flex flex-col gap-2.5">
+          {eyebrow && <div className="rotulo">{eyebrow}</div>}
+          <h1 tabIndex={-1} className="titulo-de-entrada text-ink-strong outline-none">
+            {title}
+            {highlight && (
+              <>
+                {" "}
+                <em className="italic text-success">{highlight}</em>
+              </>
+            )}
+          </h1>
+          {description && <p className="text-body text-ink-secondary">{description}</p>}
+        </div>
+        <div>{children}</div>
       </div>
-      {footer && <div className="mt-6 text-center">{footer}</div>}
+      {footer && <div className="mt-6 text-center text-label font-normal text-ink-secondary">{footer}</div>}
     </div>
   );
 }

@@ -47,7 +47,7 @@ src/proxy.ts          proteção de rotas e política de segurança de conteúdo
 - **CSP com nonce**: todas as páginas são renderizadas por requisição. Estilos e scripts inline sem nonce são bloqueados em produção.
 - **`localStorage`** guarda apenas o tema e a equipe ativa do promoter. Nenhum token ou dado de usuário.
 - **Imagens remotas** (posts do Instagram, recompensas) usam `<img>` simples, não `next/image`, porque os endereços expiram.
-- **Design**: as cores, a tipografia e os componentes seguem [design/DESIGN.md](../design/DESIGN.md). Use sempre os tokens (`bg-surface`, `text-ink-muted`, `border-line`), nunca cores avulsas do Tailwind.
+- **Design**: design system "Noite / Lima / Violeta" (o mesmo do Camarim), descrito em [design/DESIGN.md](../design/DESIGN.md); os tokens moram em `src/app/globals.css`. Use sempre os apelidos (`bg-surface`, `text-ink-muted`, `border-line`) e os materiais (`.solido`, `.vidro`, `.gel-lima`), nunca cores avulsas do Tailwind. Texto lima é `text-success`.
 - **`cn()`** em `src/lib/cn.ts` registra os tamanhos de fonte do design (`text-caption`, `text-label`...). Sem isso o `tailwind-merge` os confunde com cores e descarta.
 - **Docker**: o endereço do backend é fixado no build. Passe `BACKEND_INTERNAL_URL` como argumento de build.
 - **Datas** são exibidas e digitadas no horário de Brasília.

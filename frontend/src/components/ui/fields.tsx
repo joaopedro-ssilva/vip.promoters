@@ -12,10 +12,12 @@ import {
 import { cn } from "@/lib/cn";
 
 const controlBase =
-  "block w-full rounded-control border border-line bg-surface px-3 py-3 text-body text-ink " +
-  "hover:border-ink-muted focus-visible:border-accent aria-[invalid=true]:border-danger " +
+  "block w-full rounded-control border border-line bg-surface-sunken px-3.5 py-3 text-base text-ink-strong " +
+  "transition-[border-color,box-shadow] duration-[var(--duration-fast)] " +
+  "hover:border-ink-muted focus-visible:border-accent-border focus-visible:shadow-[0_0_0_3px_var(--accent-soft)] " +
+  "focus-visible:outline-none aria-[invalid=true]:border-danger-border " +
   "disabled:cursor-not-allowed disabled:bg-surface-raised disabled:text-ink-muted " +
-  "read-only:bg-surface";
+  "read-only:bg-surface-sunken";
 
 interface ShellProps {
   id: string;
@@ -33,10 +35,10 @@ function FieldShell({ id, label, optional, hint, error, className, children, hid
     <div className={cn("min-w-0", className)}>
       <label
         htmlFor={id}
-        className={cn("mb-2 block text-label text-ink", hideLabel && "sr-only")}
+        className={cn("rotulo mb-2 block", hideLabel && "sr-only")}
       >
         {label}
-        {optional && <span className="font-medium text-ink-muted"> (opcional)</span>}
+        {optional && <span className="font-medium normal-case tracking-normal text-ink-muted"> (opcional)</span>}
       </label>
       {children}
       {hint && !error && (
@@ -229,7 +231,7 @@ export function FormError({ message, id }: { message: string | null | undefined;
     <div
       id={id}
       role="alert"
-      className="flex items-start gap-2 rounded-control border border-danger bg-surface-raised p-3 text-label text-danger"
+      className="flex items-start gap-2 rounded-control border border-danger-border bg-danger-soft p-3 text-label text-danger"
     >
       <CircleAlert aria-hidden="true" strokeWidth={1.75} className="mt-0.5 size-4 shrink-0" />
       <span className="min-w-0">{message}</span>
