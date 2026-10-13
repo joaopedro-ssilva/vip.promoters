@@ -8,12 +8,25 @@ import tempfile
 from pathlib import Path
 
 # ---- ambiente de teste: definido ANTES de importar a aplicacao ----------------------
-_dev_url = os.environ.get("DATABASE_URL", "postgresql+asyncpg://vip:vip@db:5432/vip")
+# DATABASE_URL_ADMIN (ou, na falta, DATABASE_URL) e um papel que cria bancos e papeis. O app
+# roda nos testes com o PAPEL DE APLICACAO, como em producao: o RLS vale de verdade aqui.
+_admin_url = os.environ.get("DATABASE_URL_ADMIN") or os.environ.get(
+    "DATABASE_URL", "postgresql+asyncpg://vip:vip@db:5432/vip"
+)
 TEST_DB = "vip_test"
-TEST_URL = _dev_url.rsplit("/", 1)[0] + "/" + TEST_DB
+# Papel PROPRIO dos testes: papeis valem para o servidor inteiro, e reaproveitar o vip_app
+# trocaria a senha do papel que o app de desenvolvimento usa no mesmo Postgres.
+APP_DB_USER = os.environ.get("TEST_APP_DB_USER", "vip_test_app")
+APP_DB_PASSWORD = os.environ.get("TEST_APP_DB_PASSWORD") or "vip_test_app"
+_server = _admin_url.split("@", 1)[1].rsplit("/", 1)[0]
+TEST_ADMIN_URL = _admin_url.rsplit("/", 1)[0] + "/" + TEST_DB
+TEST_URL = f"postgresql+asyncpg://{APP_DB_USER}:{APP_DB_PASSWORD}@{_server}/{TEST_DB}"
 os.environ.update(
     {
         "DATABASE_URL": TEST_URL,
+        "DATABASE_URL_ADMIN": TEST_ADMIN_URL,
+        "APP_DB_USER": APP_DB_USER,
+        "APP_DB_PASSWORD": APP_DB_PASSWORD,
         "REDIS_URL": os.environ.get("REDIS_URL", "redis://redis:6379/0").rsplit("/", 1)[0] + "/15",
         "ENVIRONMENT": "development",
         "META_MOCK_MODE": "true",
@@ -32,7 +45,7 @@ def _prepare_database() -> None:
     import asyncpg
 
     admin = (
-        _dev_url.replace("postgresql+asyncpg://", "postgresql://").rsplit("/", 1)[0] + "/postgres"
+        _admin_url.replace("postgresql+asyncpg://", "postgresql://").rsplit("/", 1)[0] + "/postgres"
     )
 
     async def go() -> None:
@@ -45,11 +58,13 @@ def _prepare_database() -> None:
 
     asyncio.run(go())
     root = Path(__file__).resolve().parent.parent
+    # o mesmo comando do deploy: migracoes + papel de aplicacao
     subprocess.run(
-        [sys.executable, "-m", "alembic", "upgrade", "head"],
+        [sys.executable, "-m", "app.cli", "preparar-banco"],
         cwd=root,
         env=os.environ.copy(),
         check=True,
+        stdout=subprocess.DEVNULL,
     )
 
 
@@ -59,8 +74,8 @@ import pytest  # noqa: E402
 import pytest_asyncio  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402
 from sqlalchemy import text  # noqa: E402
+from sqlalchemy.ext.asyncio import create_async_engine  # noqa: E402
 
-from app.core.db import engine  # noqa: E402
 from app.core.redis import get_redis  # noqa: E402
 from app.main import app  # noqa: E402
 
@@ -78,9 +93,13 @@ class FakeArq:
         self.jobs.append((name, payload))
 
 
+# TRUNCATE e privilegio do dono das tabelas, nunca do papel de aplicacao
+admin_engine = create_async_engine(TEST_ADMIN_URL)
+
+
 @pytest_asyncio.fixture(autouse=True)
 async def clean_state():
-    async with engine.begin() as conn:
+    async with admin_engine.begin() as conn:
         await conn.execute(text(f"TRUNCATE {TABLES} RESTART IDENTITY CASCADE"))
     await get_redis().flushdb()
     from app.core import rate_limit

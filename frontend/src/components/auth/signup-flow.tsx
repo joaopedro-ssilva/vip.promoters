@@ -5,7 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { ArrowLeft, Check, Ticket, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -149,6 +149,11 @@ function DetailsStep({ role, convite, next, onBack }: { role: Role; convite: str
   const [formError, setFormError] = useState<string | null>(null);
   // the @ belongs to someone else who never verified it: offer to dispute it
   const [claimable, setClaimable] = useState<RegisterInput | null>(null);
+  // the submit button is replaced by the dispute box: keep keyboard focus there
+  const claimRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (claimable) claimRef.current?.focus();
+  }, [claimable]);
 
   const form = useForm<Values>({
     resolver: zodResolver(schemaFor(role)),
@@ -261,8 +266,24 @@ function DetailsStep({ role, convite, next, onBack }: { role: Role; convite: str
             />
           </>
         )}
+        <p className="text-caption text-ink-muted">
+          Ao criar a conta, você concorda com os{" "}
+          <Link href="/termos" className="text-success underline">
+            Termos de Uso
+          </Link>{" "}
+          e a{" "}
+          <Link href="/privacidade" className="text-success underline">
+            Política de Privacidade
+          </Link>
+          .
+        </p>
         {claimable ? (
-          <div role="alert" className="flex flex-col gap-3 rounded-control border border-violet-border bg-violet-soft p-4">
+          <div
+            ref={claimRef}
+            tabIndex={-1}
+            role="alert"
+            className="flex flex-col gap-3 rounded-control border border-violet-border bg-violet-soft p-4 outline-none"
+          >
             <p className="text-label text-ink">
               Esse @ é seu? Crie a conta assim mesmo. Você entra sem o @ e, em seguida, prova pelo Instagram
               comentando um código. Quando a prova chegar, o @ passa para você.

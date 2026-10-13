@@ -4,8 +4,8 @@ from sqlalchemy import select
 
 from app.core.db import SessionLocal
 from app.models import Interaction, Membership, PromoterProfile
-from tests.helpers import PASSWORD, comment_payload, error_code, new_manager, new_promoter
 from tests.conftest import make_client
+from tests.helpers import PASSWORD, comment_payload, error_code, new_manager, new_promoter
 
 API = "/api/v1"
 
@@ -80,7 +80,11 @@ async def test_username_dispute_moves_unverified_username_to_real_owner():
     await deliver_comment(m, "dono.real", v["code"], "c_claim")
 
     me = (await c.get(f"{API}/auth/me")).json()["user"]["promoter_profile"]
-    assert me == {"instagram_username": "dono.real", "verified": True, "verification_method": "comment"}
+    assert me == {
+        "instagram_username": "dono.real",
+        "verified": True,
+        "verification_method": "comment",
+    }
     async with SessionLocal() as db:
         lost = await db.get(PromoterProfile, squatter.user["id"])
         assert lost.instagram_username is None and lost.verified is False

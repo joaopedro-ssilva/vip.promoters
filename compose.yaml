@@ -1,9 +1,13 @@
 name: vip-promoters
 
+# O app conecta com o PAPEL DE APLICACAO (APP_DB_USER): sem superusuario, sem BYPASSRLS e
+# sem ser dono das tabelas, para o Row Level Security valer. O dono (POSTGRES_USER) so e
+# usado pelo servico `migrate`.
 x-backend-env: &backend-env
   env_file: .env
   environment:
-    DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-vip}:${POSTGRES_PASSWORD:-vip}@db:5432/${POSTGRES_DB:-vip}
+    DATABASE_URL: postgresql+asyncpg://${APP_DB_USER:-vip_app}:${APP_DB_PASSWORD:?defina APP_DB_PASSWORD no .env}@db:5432/${POSTGRES_DB:-vip}
+    DATABASE_URL_ADMIN: ""
     REDIS_URL: redis://redis:6379/0
     UPLOAD_DIR: /data/uploads
 
@@ -33,9 +37,24 @@ services:
       timeout: 3s
       retries: 10
 
-  backend:
+  # Migracoes + papel de aplicacao. Roda e sai; o backend so sobe depois que ele termina.
+  migrate:
     build:
       context: ./backend
+    image: vip-promoters-backend
+    restart: "no"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${APP_DB_USER:-vip_app}:${APP_DB_PASSWORD:?defina APP_DB_PASSWORD no .env}@db:5432/${POSTGRES_DB:-vip}
+      DATABASE_URL_ADMIN: postgresql+asyncpg://${POSTGRES_USER:-vip}:${POSTGRES_PASSWORD:-vip}@db:5432/${POSTGRES_DB:-vip}
+      APP_DB_USER: ${APP_DB_USER:-vip_app}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+    command: ["python", "-m", "app.cli", "preparar-banco"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  backend:
     image: vip-promoters-backend
     restart: unless-stopped
     <<: *backend-env
@@ -44,8 +63,8 @@ services:
     volumes:
       - uploads:/data/uploads
     depends_on:
-      db:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
     healthcheck:

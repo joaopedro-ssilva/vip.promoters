@@ -5,7 +5,7 @@ services:
       context: ./backend
       target: dev
     image: vip-promoters-backend-dev
-    command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log --reload --reload-dir /app/app"]
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log", "--reload", "--reload-dir", "/app/app"]
     environment:
       WATCHFILES_FORCE_POLLING: "true"
     volumes:
@@ -21,13 +21,22 @@ services:
       - ./backend:/app
       - uploads:/data/uploads
 
+  migrate:
+    build:
+      context: ./backend
+      target: dev
+    image: vip-promoters-backend-dev
+    volumes:
+      - ./backend:/app
+
   # Testes: docker compose -f compose.yaml -f compose.dev.yaml run --rm tests
+  # (os testes criam o banco vip_test e rodam o app com o papel de aplicacao)
   tests:
     image: vip-promoters-backend-dev
     profiles: ["test"]
     env_file: .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-vip}:${POSTGRES_PASSWORD:-vip}@db:5432/${POSTGRES_DB:-vip}
+      DATABASE_URL_ADMIN: postgresql+asyncpg://${POSTGRES_USER:-vip}:${POSTGRES_PASSWORD:-vip}@db:5432/${POSTGRES_DB:-vip}
       REDIS_URL: redis://redis:6379/0
     command: ["pytest", "-q"]
     volumes:

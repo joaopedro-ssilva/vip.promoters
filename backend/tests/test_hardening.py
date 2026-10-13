@@ -110,21 +110,22 @@ async def test_retention_anonymizes_old_interactions_and_keeps_points(client):
         )
         await db.commit()
         balance_before = (
-            await db.execute(select(Membership.points_balance).where(Membership.id == p.membership_id))
+            await db.execute(
+                select(Membership.points_balance).where(Membership.id == p.membership_id)
+            )
         ).scalar_one()
         res = await retention.purge(db, now)
         assert res.interactions_anonymized == 1
 
-        rows = {
-            str(i.campaign_id): i
-            for i in (await db.execute(select(Interaction))).scalars()
-        }
+        rows = {str(i.campaign_id): i for i in (await db.execute(select(Interaction))).scalars()}
         gone, kept = rows[old["id"]], rows[fresh["id"]]
         assert gone.text is None and gone.ig_username is None and gone.ig_scoped_id is None
         assert gone.points_awarded == 50 and gone.status == "awarded"
         assert kept.text == "texto novo" and kept.ig_username == p.username
         balance_after = (
-            await db.execute(select(Membership.points_balance).where(Membership.id == p.membership_id))
+            await db.execute(
+                select(Membership.points_balance).where(Membership.id == p.membership_id)
+            )
         ).scalar_one()
         assert balance_after == balance_before  # extrato e saldo intactos
 

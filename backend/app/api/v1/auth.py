@@ -9,6 +9,7 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import DB, CurrentUser
+from app.core import rls
 from app.core.config import settings
 from app.core.errors import AppError, error_response
 from app.core.rate_limit import check_rate_limit, client_ip
@@ -351,7 +352,8 @@ async def delete_account(body: DeleteAccountIn, user: CurrentUser, db: DB):
         raise AppError(
             422, "validation_error", "Dados inválidos.", {"password": "Senha incorreta."}
         )
-    summary = await privacy.delete_account(db, user)
+    async with rls.system(db):  # a conta atravessa organizacoes (todas as equipes dela)
+        summary = await privacy.delete_account(db, user)
     await mark_revoked(summary.family_ids)
     resp = Response(status_code=204)
     clear_session_cookies(resp)

@@ -14,9 +14,17 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
       <footer className="border-t border-line-subtle bg-surface-sunken">
         <div className="mx-auto flex w-full max-w-site flex-wrap items-center justify-between gap-3 px-4 py-6 md:px-6 lg:px-8">
           <Brand />
-          <ButtonLink href="/entrar" variant="ghost" size="sm">
-            Entrar
-          </ButtonLink>
+          <nav aria-label="Rodapé" className="flex flex-wrap items-center gap-1">
+            <ButtonLink href="/privacidade" variant="ghost" size="sm">
+              Privacidade
+            </ButtonLink>
+            <ButtonLink href="/termos" variant="ghost" size="sm">
+              Termos
+            </ButtonLink>
+            <ButtonLink href="/entrar" variant="ghost" size="sm">
+              Entrar
+            </ButtonLink>
+          </nav>
         </div>
       </footer>
     </div>

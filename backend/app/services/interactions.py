@@ -11,6 +11,7 @@ from sqlalchemy import exists, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import rls
 from app.core.crypto import decrypt
 from app.models import (
     Campaign,
@@ -367,14 +368,18 @@ async def _resolve_story_username(account: InstagramAccount, scoped_id: str) -> 
 
 
 async def process_event(db: AsyncSession, ev: InboundEvent) -> PipelineResult:
-    """Unica porta de entrada para comentarios e mencoes em story. Faz commit."""
-    try:
-        result = await _process(db, ev)
-        await db.commit()
-        return result
-    except Exception:
-        await db.rollback()
-        raise
+    """Unica porta de entrada para comentarios e mencoes em story. Faz commit.
+
+    Roda em modo SISTEMA mesmo quando chamado de uma rota do gestor (simulador, sync): o
+    evento vem da Meta e pode tocar outra organizacao (ex.: verificacao do @)."""
+    async with rls.system(db):
+        try:
+            result = await _process(db, ev)
+            await db.commit()
+            return result
+        except Exception:
+            await db.rollback()
+            raise
 
 
 async def _process(db: AsyncSession, ev: InboundEvent) -> PipelineResult:

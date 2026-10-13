@@ -24,7 +24,13 @@ class Settings(BaseSettings):
     environment: Literal["development", "production"] = "production"
     app_url: str = "http://localhost:3000"
     allowed_origins: str = "http://localhost:3000"
+    # DATABASE_URL e o papel de APLICACAO (sem superusuario, sem BYPASSRLS, nao e dono das
+    # tabelas): e ele que faz o RLS valer. DATABASE_URL_ADMIN e o dono das tabelas, usado so
+    # por `python -m app.cli preparar-banco` (migracoes + papel de aplicacao).
     database_url: str = "postgresql+asyncpg://vip:vip@db:5432/vip"
+    database_url_admin: str = ""
+    app_db_user: str = "vip_app"
+    app_db_password: str = ""
     redis_url: str = "redis://redis:6379/0"
     secret_key: str = DEFAULT_SECRET_KEY
     # Rotacao: chaves ANTERIORES (separadas por virgula) ainda aceitas na leitura. O

@@ -7,6 +7,16 @@ Revises: 0002
 import sqlalchemy as sa
 from alembic import op
 
+# Tabelas com organization_id: so mostram as organizacoes do contexto (app/core/rls.py).
+TENANT_TABLES = (
+    "memberships",
+    "campaigns",
+    "interactions",
+    "rewards",
+    "redemptions",
+    "point_transactions",
+)
+
 revision = "0003"
 down_revision = "0002"
 branch_labels = None
@@ -72,7 +82,59 @@ def upgrade() -> None:
     )
 
 
+    # ---- Row Level Security (segunda camada do isolamento entre organizacoes)
+    op.execute(
+        """
+        CREATE OR REPLACE FUNCTION app_rls_system() RETURNS boolean
+        LANGUAGE sql STABLE AS $$
+            SELECT coalesce(current_setting('app.rls_mode', true), '') = 'system'
+        $$
+        """
+    )
+    op.execute(
+        """
+        CREATE OR REPLACE FUNCTION app_org_ids() RETURNS uuid[]
+        LANGUAGE sql STABLE AS $$
+            SELECT coalesce(
+                string_to_array(nullif(current_setting('app.org_ids', true), ''), ',')::uuid[],
+                '{}'::uuid[]
+            )
+        $$
+        """
+    )
+    op.execute(
+        """
+        CREATE OR REPLACE FUNCTION app_user_id() RETURNS uuid
+        LANGUAGE sql STABLE AS $$
+            SELECT nullif(current_setting('app.user_id', true), '')::uuid
+        $$
+        """
+    )
+    for table in TENANT_TABLES:
+        extra = " OR promoter_id = app_user_id()" if table == "memberships" else ""
+        cond = f"app_rls_system() OR organization_id = ANY (app_org_ids()){extra}"
+        op.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
+        op.execute(f"CREATE POLICY tenant ON {table} USING ({cond}) WITH CHECK ({cond})")
+    org_cond = "app_rls_system() OR id = ANY (app_org_ids()) OR owner_id = app_user_id()"
+    op.execute("ALTER TABLE organizations ENABLE ROW LEVEL SECURITY")
+    op.execute(f"CREATE POLICY tenant ON organizations USING ({org_cond}) WITH CHECK ({org_cond})")
+    # Conta do Instagram (guarda o token cifrado): a propria, ou a do dono de uma equipe
+    # visivel (o promoter ve o @ da equipe na lista de participacoes).
+    ig_cond = (
+        "app_rls_system() OR user_id = app_user_id() OR user_id IN "
+        "(SELECT owner_id FROM organizations WHERE id = ANY (app_org_ids()))"
+    )
+    op.execute("ALTER TABLE instagram_accounts ENABLE ROW LEVEL SECURITY")
+    op.execute(
+        f"CREATE POLICY tenant ON instagram_accounts USING ({ig_cond}) WITH CHECK ({ig_cond})"
+    )
+
+
 def downgrade() -> None:
+    for table in (*TENANT_TABLES, "organizations", "instagram_accounts"):
+        op.execute(f"DROP POLICY IF EXISTS tenant ON {table}")
+        op.execute(f"ALTER TABLE {table} DISABLE ROW LEVEL SECURITY")
+    op.execute("DROP FUNCTION IF EXISTS app_rls_system(), app_org_ids(), app_user_id()")
     op.drop_table("username_claims")
     op.execute("DELETE FROM promoter_profiles WHERE instagram_username IS NULL")
     op.alter_column("promoter_profiles", "instagram_username", nullable=False)

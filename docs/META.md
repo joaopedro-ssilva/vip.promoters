@@ -60,6 +60,7 @@ Na tela do produto Instagram, no painel da Meta:
 | URL de redirecionamento (Business login settings) | `https://SEU-ENDERECO/api/v1/instagram/callback` |
 | Webhook: URL de callback | `https://SEU-ENDERECO/api/v1/webhooks/instagram` |
 | Webhook: token de verificação | o valor de `META_WEBHOOK_VERIFY_TOKEN` do `.env` |
+| Política de Privacidade / Termos | `https://SEU-ENDERECO/privacidade` e `https://SEU-ENDERECO/termos` |
 | Webhook: campos a assinar | `comments` e `messages` |
 | URL de desautorização | `https://SEU-ENDERECO/api/v1/meta/deauthorize` |
 | URL de exclusão de dados | `https://SEU-ENDERECO/api/v1/meta/data-deletion` |
@@ -81,6 +82,8 @@ O app precisa estar rodando nessa hora: a Meta testa o endereço do webhook ao s
 ### Limites do modo de teste
 
 - Só funcionam contas de gestor cadastradas como testadoras. Promoters não precisam de cadastro na Meta: eles não conectam nada.
+- A **verificação de @ por comentário** depende do comentário chegar pelo webhook; no modo de teste, provavelmente só chega o de contas com função no app. Para testar, cadastre o Instagram do promoter também como testador.
+- Se **todo** webhook for recusado (403 no log), a Meta está assinando com a outra chave do painel (a do app Meta, em vez da do app do Instagram, ou o contrário). Coloque essa outra chave em `META_WEBHOOK_SECRET` e reinicie.
 - A Meta costuma entregar apenas as interações de pessoas que também têm função no app. A menção em story de um promoter comum provavelmente não chega.
 - A leitura de comentários é feita por busca periódica (a cada 2 minutos) e pode funcionar antes da aprovação, mas isso não foi confirmado com conta real.
 
@@ -94,7 +97,7 @@ A aprovação tem duas etapas em sequência: a Meta verifica a **empresa** e dep
 
 - App no ar em domínio próprio com https (não em túnel temporário).
 - Instagram real funcionando para uma conta testadora (Parte 1).
-- Página de **Política de Privacidade** pública. Ela ainda não existe neste projeto.
+- **Política de Privacidade** e **Termos** públicos: já existem em `/privacidade` e `/termos`, mas como modelo. Preencha `frontend/src/lib/legal.ts` e revise com um advogado.
 
 ### Etapa 1: verificação da empresa
 
@@ -111,7 +114,7 @@ No painel do app, em **Configurações → Básico**: ícone, categoria, URL da 
 
 ### Etapa 3: pedir as permissões
 
-Em **Análise do app** → **Permissões e recursos**, peça **acesso avançado** para as quatro permissões:
+Em **Análise do app** → **Permissões e recursos**, peça **acesso avançado** para as quatro permissões (os textos sugeridos e o que mostrar em cada vídeo estão no [README](../README.md#fase-4-montar-o-pedido-do-app-review)):
 
 | Permissão | Para que serve no app |
 |---|---|

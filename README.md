@@ -12,12 +12,16 @@ Regra central: **no máximo 1 comentário pontuado por promoter em cada campanha
 | Item | Estado |
 |---|---|
 | Produto (gestor, promoter, pontos, lojinha) | Pronto e testado em modo simulado |
-| Backend | 109 testes passando e lint limpo. Segurança de sessão, CSRF, webhooks e isolamento entre equipes sólidos (ver [Segurança](#segurança)) |
+| Backend | 133 testes passando e lint limpo, rodando como em produção (papel de banco sem privilégios, com RLS) |
+| Segurança e LGPD | Isolamento entre equipes em duas camadas (aplicação e RLS no Postgres), exclusão de conta e de dados, retenção automática, verificação do @ por comentário com disputa, rotação de chaves (ver [Segurança](#segurança)) |
+| Páginas legais | Política de Privacidade (`/privacidade`) e Termos (`/termos`) prontos como **modelo**: falta preencher os dados da empresa e passar por um advogado |
 | Visual | Design system "Noite / Lima / Violeta", o mesmo do Camarim ([design/DESIGN.md](design/DESIGN.md)) |
 | Instagram de verdade | Código escrito, **nunca testado contra a API real** (exige um app seu na Meta) |
-| Aprovação da Meta (App Review) | Não iniciada. Bloqueada por: CNPJ verificado, domínio com HTTPS, Política de Privacidade e Termos (ver [Roteiro](#roteiro-até-o-app-review-e-o-lançamento)) |
-| Cobrança, recuperação de senha, e-mails, exclusão de conta, painel de administrador | Não existem |
+| Aprovação da Meta (App Review) | Não iniciada. Bloqueada por coisas fora do código: CNPJ verificado e domínio com HTTPS (ver [Etapas](#etapas-para-o-app-review-e-o-lançamento-como-saas)) |
+| Cobrança, recuperação de senha, e-mails, painel de administrador | Não existem |
 | Hospedagem | Roda só na máquina local, via Docker |
+
+Gargalos e dúvidas que dependem de decisão (sua, de advogado ou da Meta) estão em [docs/DECISOES.md](docs/DECISOES.md).
 
 ## O que o Instagram deixa (e não deixa) saber
 
@@ -44,9 +48,11 @@ Regra prática para os promoters: "reposte no story **e marque o @**". Sem a mar
 Requisito: Docker Desktop. Não é preciso ter Python nem Node instalados.
 
 ```bash
-cp .env.example .env     # preencha SECRET_KEY, TOKEN_ENCRYPTION_KEY e META_WEBHOOK_VERIFY_TOKEN
+cp .env.example .env     # preencha SECRET_KEY, TOKEN_ENCRYPTION_KEY, META_WEBHOOK_VERIFY_TOKEN e APP_DB_PASSWORD
 docker compose up -d --build
 ```
+
+Ao subir, o serviço `migrate` aplica as migrações e cria o papel de banco da aplicação (`vip_app`); só depois o backend e o worker sobem, já conectados com esse papel.
 
 Abra **http://localhost:3000**. A API fica em `http://localhost:8000/api/v1`, com documentação interativa em `http://localhost:8000/docs`.
 
@@ -56,6 +62,7 @@ Gerar valores para os segredos:
 openssl rand -hex 32                           # SECRET_KEY
 openssl rand -base64 32 | tr '+/' '-_'         # TOKEN_ENCRYPTION_KEY
 openssl rand -hex 16                           # META_WEBHOOK_VERIFY_TOKEN
+openssl rand -hex 24                           # APP_DB_PASSWORD
 ```
 
 ### Logins de demonstração
@@ -106,74 +113,124 @@ O gestor é quem confirma que um @ pertence a um promoter:
 
 Sem isso, um promoter poderia assumir o @ de outra pessoa e receber os pontos dela.
 
-## Roteiro até o App Review e o lançamento
+### Verificação do @ e disputa
 
-Cada gestor já tem a sua organização isolada (equipe, campanhas, pontos e lojinha próprios; um cliente não enxerga nada do outro, e isso está coberto por testes). O caminho até lançar, em ordem:
+O promoter pode **provar** que o @ é dele, mesmo com conta pessoal: o app gera um código (`VIP-XXXXXX`) e ele comenta esse código em qualquer post de uma conta conectada ao app. O comentário chega pelo webhook com o @ autêntico de quem comentou, que vem da Meta e não do usuário. O gestor vê o selo de verificado na lista da equipe. O comentário de verificação nunca pontua.
 
-### Etapa 1: validar o Instagram real (modo de teste da Meta)
+Se outra pessoa cadastrou o seu @ sem verificar, o cadastro oferece "É meu: criar conta e provar". A conta nasce sem @ e, quando o código chega comentado pelo @ certo, o @ muda de dono: quem estava com ele fica sem @ e as equipes dele voltam para "pendente". Um @ já verificado não pode ser reivindicado.
 
-Nada disto depende de aprovação; depende de um app criado na Meta e de um endereço com HTTPS. Siga o [guia da Meta](docs/META.md), Parte 1.
+O login do Instagram não é mais pedido ao promoter: ele só aceita contas profissionais e aumentaria o escopo do App Review.
+
+## Etapas para o App Review e o lançamento como SaaS
+
+O caminho completo, em ordem. Cada fase diz se é código (já feito ou a fazer) ou ação sua.
+
+### Fase 0: o que o código já resolve
+
+| Exigência | Onde está |
+|---|---|
+| Política de Privacidade e Termos de Uso públicos | `/privacidade` e `/termos` (modelos: preencha `frontend/src/lib/legal.ts`) |
+| URL de exclusão de dados da Meta, que apaga de verdade e devolve um código consultável | `POST /api/v1/meta/data-deletion` e `GET /api/v1/meta/data-deletion/{código}` |
+| URL de desautorização | `POST /api/v1/meta/deauthorize` |
+| Excluir a própria conta (gestor e promoter) | Configurações / Perfil → "Excluir minha conta" |
+| Prazo de retenção e minimização de dados | job diário do worker (`RETENTION_DAYS`) |
+| Só 4 permissões, todas do gestor | o promoter não conecta o Instagram |
+| Isolamento entre clientes (o revisor e os clientes perguntam) | aplicação + Row Level Security, com testes |
+
+### Fase 1: empresa, domínio e textos legais (você)
+
+1. **CNPJ** (MEI ou ME; ver [guia da Meta](docs/META.md), Parte 3) e **Meta Business verificado** com os mesmos dados do cartão CNPJ. Leva de 1 a 5 dias úteis; comece por aqui.
+2. **Domínio** próprio e um **e-mail de contato** nele (ex.: `privacidade@seudominio.com.br`).
+3. Preencher `frontend/src/lib/legal.ts` (razão social, CNPJ, e-mail, encarregado, foro, data) e **revisar a Política e os Termos com um advogado** (ver [DECISOES.md](docs/DECISOES.md), 1.6).
+
+### Fase 2: hospedagem de produção (você)
+
+1. Servidor com Docker (ou PaaS) e **proxy HTTPS** (Caddy, Nginx, Traefik) na frente do frontend. Veja [Colocando em produção](#colocando-em-produção).
+2. **Postgres com backup automático**: gerenciado (Neon, Supabase, RDS…) ou o do compose com `scripts/backup.sh` agendado e cópia fora do servidor.
+3. `.env` de produção completo, com segredos novos (lista em [Colocando em produção](#colocando-em-produção)).
+4. Monitor de disponibilidade apontado para `/api/v1/health/ready` (UptimeRobot, Better Stack…).
+
+### Fase 3: Instagram real em modo de teste (você, seguindo o [guia](docs/META.md), Parte 1)
 
 1. Criar o app na Meta ("API setup with Instagram login") e preencher `META_APP_ID` / `META_APP_SECRET`.
-2. Subir em um endereço público com HTTPS (túnel serve para este teste).
-3. Conectar um Instagram profissional cadastrado como testador e conferir, **com conta real**:
-   - a lista de posts ao criar campanha;
-   - comentários chegando pelo webhook **e** pela busca periódica;
-   - menção em story chegando pelo webhook (exige, no app do Instagram do gestor, *Configurações → Mensagens → Ferramentas conectadas → Permitir acesso às mensagens*);
-   - publicar um post pelo app (exige endereço público para a Meta baixar a imagem);
-   - desconectar e reconectar.
-4. **Ponto de atenção a confirmar no primeiro teste:** a assinatura `X-Hub-Signature-256` dos webhooks é conferida com `META_APP_SECRET`. No login do Instagram há duas chaves no painel (a do app Meta e a do "app do Instagram"); se todo webhook vier recusado com 403, a chave usada para assinar é a outra, e o backend precisa de uma variável separada para ela.
+2. Cadastrar as URLs no painel: redirecionamento, webhook (campos `comments` e `messages`), desautorização e exclusão de dados.
+3. Com uma conta **testadora**, conferir:
+   - [ ] os posts aparecem ao criar campanha;
+   - [ ] o comentário chega pelo webhook **e** pela busca periódica;
+   - [ ] a menção em story chega (exige, no Instagram do gestor, *Configurações → Mensagens → Ferramentas conectadas → Permitir acesso às mensagens*);
+   - [ ] a verificação de @ de um promoter testador funciona (comentar o código num post);
+   - [ ] publicar um post pelo app;
+   - [ ] remover o app no Instagram e pedir exclusão de dados: o código de confirmação abre em `/api/v1/meta/data-deletion/{código}`.
+4. Se **todo** webhook voltar com 403, defina `META_WEBHOOK_SECRET` com a outra chave do painel ([DECISOES.md](docs/DECISOES.md), 2.1).
 
-### Etapa 2: o que precisa existir antes de pedir o App Review
+### Fase 4: montar o pedido do App Review
 
-| Item | Por quê | Situação |
+1. **Configurações → Básico** no painel: ícone, categoria, URL da Política (`https://SEU-DOMINIO/privacidade`), URL dos Termos (`/termos`), URL de exclusão de dados e o vínculo com a empresa verificada.
+2. **Conta para o revisor**: um gestor com Instagram de teste conectado, uma campanha **ativa**, promoters aprovados e um roteiro passo a passo em inglês. Em produção `SEED_DEMO` fica `false`; crie essa conta à mão.
+3. **Acesso avançado** para as 4 permissões, cada uma com texto e vídeo. Textos sugeridos (adapte):
+
+| Permissão | Texto do uso | O vídeo mostra |
 |---|---|---|
-| Domínio próprio com HTTPS (não túnel) | a Meta testa as URLs de callback e o revisor usa o app | falta |
-| Página de **Política de Privacidade** pública | obrigatória no painel da Meta | falta |
-| Página de **Termos de Uso** | exigida na prática para SaaS; o revisor procura | falta |
-| **Exclusão de dados de verdade** | o callback `/meta/data-deletion` hoje só apaga a conexão do Instagram; os comentários e @ guardados de quem pediu a exclusão continuam no banco. A Meta e a LGPD esperam que sumam | parcial |
-| **Excluir a própria conta** pelo app (gestor e promoter) | LGPD; o revisor costuma procurar | falta |
-| Empresa verificada no Meta Business (CNPJ) | sem ela a análise do app não começa | falta (ver [guia](docs/META.md), Parte 3) |
-| Conta de teste para o revisor, com campanha ativa e roteiro passo a passo | reprovação mais comum é login de teste que não funciona | falta |
-| Vídeo de tela por permissão (4 vídeos) | exigido para cada uma das 4 permissões | falta |
-| Revisar o pedido de `instagram_business_manage_messages` | é a permissão mais escrutinada; o uso declarado é **só** receber menções em story. O app nunca lê nem envia DM, e isso precisa estar no texto e no vídeo | texto a escrever |
+| `instagram_business_basic` | "The business connects its professional Instagram account to pick one of its own posts as a campaign and to show its profile to its team." | Login no app → Conectar Instagram → tela de autorização → perfil e posts na criação de campanha |
+| `instagram_business_manage_comments` | "We read comments on the business's own campaign posts to credit points to the team members who commented. We never reply, hide or delete comments." | Campanha ativa → alguém comenta no Instagram → o comentário aparece no feed da campanha com os pontos |
+| `instagram_business_manage_messages` | "Only used to receive story_mention webhooks when a team member mentions the business in a story. We do not read, store or send direct messages." | Promoter publica story marcando o @ → a menção aparece na campanha. Diga, em voz ou legenda, que nenhuma DM é lida |
+| `instagram_business_content_publish` | "The business can publish a new post from the app and use it as a campaign." | Nova campanha → Publicar novo → o post aparece no Instagram |
 
-Dica: peça só as permissões que o app usa. O código também pede `instagram_business_basic` ao **promoter** (verificação opcional do @), mas o login do Instagram só aceita contas profissionais e a maioria dos promoters tem conta pessoal. Para o App Review, o mais seguro é tirar essa verificação da tela ou deixá-la fora do pedido.
+4. Responder o **questionário de tratamento de dados** com o que está na Política: dados mínimos, retenção, exclusão, onde fica hospedado.
+5. Enviar. Prazo típico: de alguns dias a 2 semanas depois da empresa verificada. A reprovação costuma vir de vídeo pouco claro ou de login de teste que não funciona; cada reenvio volta para a fila.
 
-### Etapa 3: para operar como SaaS
+### Fase 5: lançar como SaaS
 
-- **E-mail transacional** (Resend, Postmark, SES): base para recuperação de senha, confirmação de e-mail e convite por e-mail.
-- **Recuperação de senha** e **confirmação de e-mail**: não existem. Sem a primeira, todo esquecimento vira suporte manual.
-- **Cobrança**: planos e assinatura (Stripe, Asaas, Pagar.me). Hoje qualquer um se cadastra e usa de graça.
-- **Painel de administrador**: ver clientes, bloquear contas (o campo `is_active` existe, mas nada o altera) e acompanhar o uso.
-- **Hospedagem de produção**: Postgres gerenciado com backup automático, Redis, uploads em armazenamento de objetos (S3, R2) em vez do disco do servidor, e o worker como serviço separado.
-- **Monitoramento**: captura de erros (Sentry) e alerta quando o worker parar ou um webhook for descartado após 5 tentativas (hoje só vai para o log).
-- **Produto**: botão "Ver story" no feed da campanha; estorno quando o promoter apagar o comentário depois de pontuar (hoje não há); limpeza periódica de sessões expiradas e notificações antigas.
+| Item | Por quê | Quem |
+|---|---|---|
+| Pôr o app em **Ao vivo** no painel da Meta | sem isso, só testadores conectam | você |
+| **E-mail transacional** (Resend, Postmark, SES) | base dos itens abaixo | código |
+| **Recuperação de senha** e **confirmação de e-mail** | sem isso, cada senha esquecida vira suporte | código |
+| **Cobrança** (Stripe, Asaas, Pagar.me): planos, teste grátis, bloqueio por falta de pagamento | hoje qualquer um usa de graça | código + decisão de planos ([DECISOES.md](docs/DECISOES.md), 1.7) |
+| **Painel de administrador**: clientes, uso, bloquear conta | operar o SaaS | código |
+| **Onboarding do gestor** com o aviso de "Permitir acesso às mensagens" | sem isso, as menções em story não chegam | código |
+| **Uploads em S3/R2** | permite mais de um servidor e entra no backup | código |
+| **Monitoramento de erros** (Sentry) e alerta de webhook descartado | saber dos problemas antes do cliente | código |
+| **Processo de suporte LGPD** (e-mail da Política, `python -m app.cli esquecer @fulano`) | atende pedidos de quem só comentou | você |
 
 ## Segurança
 
-### O que já está bom (e testado)
+### O que está pronto (e testado)
 
-- Senhas com Argon2id; login em tempo constante para e-mail desconhecido.
-- Sessão em cookies `HttpOnly`: token de acesso de 15 minutos e token de renovação com rotação. Reuso de um token já rotacionado revoga a sessão inteira. Logout e troca de senha invalidam a sessão na hora, e a checagem de revogação falha fechada se o Redis cair.
-- Proteção contra CSRF por cabeçalho próprio e conferência de origem.
-- Avisos da Meta validados por assinatura antes de qualquer processamento; o payload é reduzido ao mínimo antes de entrar na fila (texto de DM nunca é guardado).
-- `signed_request` de desautorização e exclusão de dados validado por HMAC.
-- Tokens do Instagram cifrados no banco (Fernet), nunca devolvidos pela API nem escritos em log.
-- Isolamento por organização: recurso de outra equipe responde "não encontrado".
-- Limite de requisições no login, cadastro, renovação, convite, resgate, upload e simulador, com reserva em memória se o Redis cair.
-- Corpo de requisição limitado enquanto é recebido; imagens enviadas são decodificadas e regravadas como JPEG, sem metadados.
-- Cabeçalhos de segurança em toda resposta (CSP, `nosniff`, `X-Frame-Options`, HSTS com HTTPS); CSP com nonce no frontend; contêineres sem usuário root.
-- Em produção o app **recusa subir** com modo simulado, cookies inseguros, segredos padrão ou dados de demonstração. Sem `ENVIRONMENT` definido, o padrão é `production`: esquecer a variável no deploy não pula essa trava.
+- **Isolamento entre equipes em duas camadas.** Toda consulta filtra pela organização e, por baixo, o Postgres aplica **Row Level Security**: numa requisição autenticada, o banco só devolve linhas das organizações do usuário, mesmo que uma consulta esqueça o filtro (há um teste que cria uma rota "com bug" e prova isso). O app conecta com um papel sem superusuário, sem `BYPASSRLS` e que não é dono das tabelas, e em produção recusa subir se isso não for verdade. O worker, os webhooks e as rotas públicas rodam em "modo sistema", de propósito ([DECISOES.md](docs/DECISOES.md), 3.1).
+- **Senhas** com Argon2id; login em tempo constante para e-mail desconhecido.
+- **Sessão** em cookies `HttpOnly`: token de acesso de 15 minutos e token de renovação com rotação. Reuso de um token já rotacionado revoga a sessão inteira. Logout, troca de senha e exclusão de conta invalidam a sessão na hora, e a checagem de revogação falha fechada se o Redis cair.
+- **CSRF** por cabeçalho próprio e conferência de origem.
+- **Avisos da Meta** validados por assinatura antes de qualquer processamento; o payload é reduzido ao mínimo antes de entrar na fila (texto de DM nunca é guardado). `signed_request` de desautorização e de exclusão validado por HMAC.
+- **Tokens do Instagram** cifrados no banco, nunca devolvidos pela API nem escritos em log.
+- **Rotação de chaves sem derrubar ninguém**: `SECRET_KEY_PREVIOUS` e `TOKEN_ENCRYPTION_KEY_PREVIOUS` continuam valendo só para leitura, e o worker recifra os tokens com a chave nova.
+- **LGPD**: excluir a própria conta pelo app; exclusão de dados pedida pela Meta que apaga de verdade e registra o pedido (só o hash do id); anonimização automática das interações após `RETENTION_DAYS`; limpeza de sessões e notificações antigas; esquecimento de quem só comentou (`python -m app.cli esquecer @fulano`).
+- **Identidade do promoter**: verificação do @ por comentário e disputa de @ cadastrado sem verificação.
+- **Limite de requisições** no login, cadastro, renovação, convite, verificação, resgate, upload e simulador, com reserva em memória se o Redis cair.
+- **Uploads**: corpo limitado enquanto é recebido; imagens decodificadas e regravadas como JPEG, sem metadados.
+- **Cabeçalhos de segurança** em toda resposta (CSP, `nosniff`, `X-Frame-Options`, HSTS com HTTPS); CSP com nonce no frontend; contêineres sem usuário root.
+- **Configuração de produção**: o app recusa subir com modo simulado, cookies inseguros, segredos padrão (inclusive como chave anterior) ou dados de demonstração. Sem `ENVIRONMENT`, o padrão é `production`.
+- **Prontidão**: `/api/v1/health/ready` responde 503 se o banco ou o Redis caírem (o compose usa esse endpoint no healthcheck).
+- **Backup**: `scripts/backup.sh` (pg_dump) com restauração.
 
-### O que falta (em ordem de prioridade)
+### O que ainda falta
 
-1. **Exclusão de dados e de conta** (LGPD e Meta), descrita na Etapa 2.
-2. **Defesa em profundidade no banco**: o isolamento entre equipes depende só do `where` de cada consulta. Uma consulta esquecida vaza dados de outro cliente. Row Level Security no Postgres, como no Camarim, fecha essa porta.
-3. **Política de retenção**: comentários, @ e links de story ficam para sempre. Definir prazo (por exemplo, 12 meses após o fim da campanha) e apagar automaticamente.
-4. **Disputa de @**: quem se cadastra primeiro com um @ fica com ele. A aprovação manual do gestor impede o roubo de pontos, mas o dono real do @ não consegue se cadastrar e não há caminho para resolver.
-5. **Backups e rotação de segredos**: rotacionar `TOKEN_ENCRYPTION_KEY` hoje exige reconectar todas as contas (não há suporte a duas chaves ao mesmo tempo).
-6. **Health check de prontidão**: `/health` responde "ok" mesmo com banco ou Redis fora; o orquestrador não percebe a falha.
+1. **Recuperação de senha e confirmação de e-mail** (dependem de e-mail transacional). Hoje o cadastro aceita qualquer e-mail sem confirmar.
+2. **Segundo fator (2FA) para o gestor**: a conta do gestor controla o Instagram da empresa.
+3. **Painel de administrador** para bloquear contas (o campo `is_active` existe, mas nada o altera).
+4. **Revisão externa** (pentest) antes de ter clientes pagantes, e atualização automática de dependências (Dependabot) com CI rodando os testes.
+
+## Operação
+
+```bash
+docker compose run --rm migrate                         # migrações + papel de aplicação (roda sozinho no up)
+docker compose exec backend python -m app.cli retencao  # aplica a retenção agora (o worker roda todo dia)
+docker compose exec backend python -m app.cli esquecer @fulano   # pedido LGPD de quem só comentou
+scripts/backup.sh                                       # backup do banco em backups/
+scripts/backup.sh restaurar backups/vip-AAAAMMDD-HHMMSS.dump
+```
+
+**Trocar uma chave**: mova o valor atual para `SECRET_KEY_PREVIOUS` (ou `TOKEN_ENCRYPTION_KEY_PREVIOUS`), gere o novo e reinicie. Depois de 15 minutos (sessões) ou da próxima execução do job de recifra (tokens do Instagram), a chave anterior pode sair.
 
 ## Estrutura do projeto
 
@@ -184,6 +241,8 @@ backend/                          API em FastAPI, migrações, testes
 frontend/                         site em Next.js
 design/                           design system (os tokens moram em frontend/src/app/globals.css)
 docs/META.md                      guia para conectar e aprovar na Meta
+docs/DECISOES.md                  gargalos e dúvidas de solução em aberto
+scripts/backup.sh                 backup e restauração do Postgres
 docs/ARCHITECTURE.md              contrato técnico entre backend e frontend (em inglês)
 docs/openapi.json                 esquema da API gerado pelo backend
 ```
@@ -205,7 +264,14 @@ docker compose -f compose.yaml -f compose.dev.yaml run --rm tests
 docker compose -f compose.yaml -f compose.dev.yaml run --rm tests ruff check .
 ```
 
-A suíte tem 109 testes: autenticação, isolamento entre organizações, regras de pontuação, concorrência, resgates, webhooks e uploads. O frontend não tem testes automatizados; os fluxos de tela foram verificados manualmente em navegador. Veja [frontend/README.md](frontend/README.md).
+Fora do Docker, com um Postgres e um Redis locais (o usuário do `DATABASE_URL_ADMIN` precisa poder criar bancos e papéis):
+
+```bash
+cd backend
+DATABASE_URL_ADMIN=postgresql+asyncpg://vip:vip@localhost:5432/vip REDIS_URL=redis://localhost:6379/0 uv run pytest -q
+```
+
+Os testes criam o banco `vip_test`, rodam `python -m app.cli preparar-banco` e usam o app com o **papel de aplicação**: o RLS vale de verdade nos testes. A suíte tem 133 testes: autenticação, isolamento entre organizações, regras de pontuação, concorrência, resgates, webhooks e uploads. O frontend não tem testes automatizados; os fluxos de tela foram verificados manualmente em navegador. Veja [frontend/README.md](frontend/README.md).
 
 ## Colocando em produção
 
@@ -222,8 +288,13 @@ META_APP_SECRET=...
 SECRET_KEY=...
 TOKEN_ENCRYPTION_KEY=...
 META_WEBHOOK_VERIFY_TOKEN=...
+POSTGRES_PASSWORD=...          # dono das tabelas: só o serviço migrate usa
+APP_DB_PASSWORD=...            # papel de aplicação (vip_app): é com ele que o app conecta
 SEED_DEMO=false
+RETENTION_DAYS=365
 ```
+
+Com Postgres gerenciado (fora do compose), rode `python -m app.cli preparar-banco` com `DATABASE_URL_ADMIN` apontando para o usuário dono e `APP_DB_USER`/`APP_DB_PASSWORD` definidos; depois aponte o `DATABASE_URL` do app para o papel de aplicação. O app **recusa subir em produção** se o `DATABASE_URL` for superusuário, tiver `BYPASSRLS` ou for dono das tabelas: nesses casos o RLS não valeria.
 
 Em produção o app **recusa subir** com modo simulado ligado, cookies inseguros, segredos vazios ou dados de demonstração. Sem `ENVIRONMENT` definido o padrão já é `production`; o `.env.example` declara `development` para o uso local.
 
@@ -241,4 +312,4 @@ Outros pontos:
 
 O código foi escrito por agentes de IA e revisado: o backend e o frontend por agentes Claude Sonnet, o design e a revisão de segurança do backend pelo Codex (ChatGPT), com orquestração e verificação final pelo Claude Opus. A revisão do backend apontou 22 problemas, todos corrigidos com teste. O frontend não passou pela revisão do Codex; foi revisado pelo orquestrador.
 
-O visual foi refeito depois com o design system do Camarim ("Noite / Lima / Violeta"): tokens, materiais, tipografia, cascas e telas de entrada.
+O visual foi refeito depois com o design system do Camarim ("Noite / Lima / Violeta"): tokens, materiais, tipografia, cascas e telas de entrada. Na rodada seguinte entraram o RLS no Postgres, a exclusão de conta e de dados, a retenção, a verificação e disputa de @, a rotação de chaves e as páginas legais.

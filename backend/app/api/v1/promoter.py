@@ -7,6 +7,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import DB, Pager, Promoter, promoter_membership
+from app.core import rls
 from app.core.errors import AppError, not_found
 from app.core.rate_limit import check_rate_limit, client_ip
 from app.models import (
@@ -113,6 +114,15 @@ async def my_memberships(user: Promoter, db: DB):
 @router.post("/promoter/memberships", status_code=201, response_model=MembershipOut)
 async def join_team(body: JoinIn, request: Request, user: Promoter, db: DB):
     await check_rate_limit("invite", f"ip:{client_ip(request)}")
+    # Entrar por convite atravessa organizacoes de proposito: a equipe ainda nao esta no
+    # contexto de RLS deste promoter.
+    async with rls.system(db):
+        out = await _join(body, user, db)
+    await rls.add_org(db, out.organization.id)
+    return out
+
+
+async def _join(body: JoinIn, user, db) -> MembershipOut:
     org = (
         await db.execute(
             select(Organization).where(Organization.invite_code == body.invite_code.upper())

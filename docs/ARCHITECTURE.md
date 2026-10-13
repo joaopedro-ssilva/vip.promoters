@@ -530,3 +530,48 @@ Additions made while implementing; nothing above was removed or renamed.
   `memberships.approved_by`, `campaigns.publish_container_id`, `publish_container_at`,
   `sync_cursor`, `sync_full_pass_at` (migration 0002).
 - Unhandled-error (500) responses carry the same security headers and `X-Request-ID` as every other response.
+
+### Security & LGPD additions (v3, migration 0003)
+
+- **Row Level Security** on `memberships`, `campaigns`, `interactions`, `rewards`, `redemptions`,
+  `point_transactions`, `organizations` and `instagram_accounts`. Policies read three
+  transaction-local settings (`app.rls_mode`, `app.org_ids`, `app.user_id`) applied by
+  `app/core/rls.py` at the start of every transaction. Authenticated requests run in `tenant`
+  mode (the user's own organization, or the teams a promoter belongs to); the worker, webhooks,
+  public routes and deliberate cross-tenant flows (`process_event`, joining by invite, account
+  deletion) run in `system` mode. The app must connect as `APP_DB_USER` (no superuser, no
+  `BYPASSRLS`, not the table owner); `python -m app.cli preparar-banco` (run by the compose
+  `migrate` service with `DATABASE_URL_ADMIN`) applies migrations and creates/grants that role.
+  Production refuses to start otherwise.
+- New endpoints:
+
+| Method & path | Auth | Request | Response |
+|---|---|---|---|
+| `GET /health/ready` | — | | 200 `{ status, database, redis }`, or 503 when one is down |
+| `POST /auth/delete-account` | U | `{ password, confirmation: "EXCLUIR" }` | 204, cookies cleared, sessions revoked |
+| `GET /promoter/verification` | P | | `Verification` |
+| `POST /promoter/verification` | P | | `Verification` with a new `code` for the promoter's own @ (409 `already_verified`) |
+| `POST /promoter/username-claims` | P | `{ instagram_username }` | `Verification` (409 `instagram_username_verified` if someone else verified it) |
+
+  `Verification = { instagram_username: string | null, verified, claim_username, code, expires_at }`.
+  A comment containing `VIP-XXXXXX` on any post of a connected account, made by the claimed @,
+  verifies it (`verification_method = "comment"`); such comments never score.
+- `POST /auth/register` accepts `claim_username: true`. When the @ is held by an unverified
+  profile it answers **409 `instagram_username_claimable`** (without the flag) or creates the
+  account with `promoter_profile.instagram_username = null` and an open claim (with the flag).
+  A verified @ answers **409 `instagram_username_taken`**. `instagram_username` is therefore
+  nullable in `PromoterProfile`, members, redemptions and leaderboards.
+- `POST /team/members/{id}/approve` answers **400 `promoter_without_username`** while the
+  promoter has no @. `POST /instagram/connect` for promoters answers **400
+  `use_comment_verification`** (promoter Instagram Login was removed).
+- `POST /meta/data-deletion` now deletes the account connection, the posts' media fields and
+  anonymizes interactions (text, @, ids, media URL) for that Instagram id, and stores a
+  `data_deletion_requests` row (only a SHA-256 of the id). `GET /meta/data-deletion/{code}`
+  answers 404 for unknown codes.
+- Worker jobs: `apply_retention` (daily: anonymizes interactions of campaigns ended more than
+  `RETENTION_DAYS` ago, deletes expired sessions and read notifications older than
+  `NOTIFICATION_RETENTION_DAYS`) and `rotate_encrypted_tokens` (re-encrypts Instagram tokens
+  when `TOKEN_ENCRYPTION_KEY_PREVIOUS` is set). New column `campaigns.ended_at`.
+- New env vars: `DATABASE_URL_ADMIN`, `APP_DB_USER`, `APP_DB_PASSWORD`, `SECRET_KEY_PREVIOUS`,
+  `TOKEN_ENCRYPTION_KEY_PREVIOUS`, `META_WEBHOOK_SECRET`, `RETENTION_DAYS`,
+  `NOTIFICATION_RETENTION_DAYS`.
