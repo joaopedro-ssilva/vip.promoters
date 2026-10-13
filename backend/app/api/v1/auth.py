@@ -9,6 +9,7 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import DB, CurrentUser
+from app.core import rls
 from app.core.config import settings
 from app.core.errors import AppError, error_response
 from app.core.rate_limit import check_rate_limit, client_ip
@@ -28,11 +29,13 @@ from app.core.sessions import lock_families, lock_family, mark_revoked
 from app.models import Membership, Organization, PromoterProfile, RefreshToken, User
 from app.schemas.models import (
     ChangePasswordIn,
+    DeleteAccountIn,
     LoginIn,
     PatchMeIn,
     RegisterIn,
     UserEnvelope,
 )
+from app.services import privacy, verification
 from app.services.notifications import notify
 from app.services.views import user_out
 
@@ -81,16 +84,29 @@ async def register(body: RegisterIn, request: Request, response: Response, db: D
 
     if await db.scalar(select(User.id).where(User.email == body.email)):
         raise AppError(409, "email_taken", "Este e-mail já está cadastrado.")
+    claim_mode = False
     if body.role == "promoter":
         assert body.instagram_username is not None
-        if await db.scalar(
-            select(PromoterProfile.user_id).where(
+        holder_verified = await db.scalar(
+            select(PromoterProfile.verified).where(
                 PromoterProfile.instagram_username == body.instagram_username
             )
-        ):
+        )
+        if holder_verified is True:
             raise AppError(
-                409, "instagram_username_taken", "Este @ do Instagram já está cadastrado."
+                409,
+                "instagram_username_taken",
+                "Este @ já foi verificado por outra pessoa. Se ele é seu, fale com o suporte.",
             )
+        if holder_verified is False:
+            if not body.claim_username:
+                raise AppError(
+                    409,
+                    "instagram_username_claimable",
+                    "Este @ já está cadastrado, mas não foi verificado. Se ele é seu, "
+                    "crie a conta e prove pelo Instagram.",
+                )
+            claim_mode = True
     invite_org: Organization | None = None
     if body.role == "promoter" and body.invite_code:
         invite_org = (
@@ -129,14 +145,22 @@ async def register(body: RegisterIn, request: Request, response: Response, db: D
     else:
         try:
             async with db.begin_nested():
-                db.add(PromoterProfile(user_id=user.id, instagram_username=body.instagram_username))
+                db.add(
+                    PromoterProfile(
+                        user_id=user.id,
+                        instagram_username=None if claim_mode else body.instagram_username,
+                    )
+                )
                 await db.flush()
         except IntegrityError:
             raise AppError(
                 409, "instagram_username_taken", "Este @ do Instagram já está cadastrado."
             ) from None
+        if claim_mode:
+            assert body.instagram_username is not None
+            await verification.start_claim(db, user.id, body.instagram_username)
         if invite_org is not None:
-            approved = invite_org.auto_approve_promoters
+            approved = invite_org.auto_approve_promoters and not claim_mode
             db.add(
                 Membership(
                     organization_id=invite_org.id,
@@ -150,7 +174,8 @@ async def register(body: RegisterIn, request: Request, response: Response, db: D
                 invite_org.owner_id,
                 "join_request",
                 "Novo promoter na equipe" if approved else "Novo pedido para entrar na equipe",
-                f"{user.name} (@{body.instagram_username}) "
+                f"{user.name} (@{body.instagram_username}"
+                + (", @ em verificação) " if claim_mode else ") ")
                 + ("entrou na equipe." if approved else "quer entrar na sua equipe."),
                 "/gestor/equipe",
             )
@@ -311,3 +336,25 @@ async def change_password(body: ChangePasswordIn, request: Request, user: Curren
     await db.commit()
     await mark_revoked(others)
     return Response(status_code=204)
+
+
+@router.post("/delete-account", status_code=204)
+async def delete_account(body: DeleteAccountIn, user: CurrentUser, db: DB):
+    """Exclusao da propria conta (LGPD art. 18, VI). Exige a senha e a palavra EXCLUIR.
+    Gestor: leva a organizacao inteira. Promoter: perfil, saldo e extrato; as participacoes
+    dele nas equipes ficam anonimizadas."""
+    await check_rate_limit("login_account", f"pwd:{user.id}")
+    if body.confirmation.strip().upper() != "EXCLUIR":
+        raise AppError(
+            422, "validation_error", "Dados inválidos.", {"confirmation": "Digite EXCLUIR."}
+        )
+    if not await verify_password(user.password_hash, body.password):
+        raise AppError(
+            422, "validation_error", "Dados inválidos.", {"password": "Senha incorreta."}
+        )
+    async with rls.system(db):  # a conta atravessa organizacoes (todas as equipes dela)
+        summary = await privacy.delete_account(db, user)
+    await mark_revoked(summary.family_ids)
+    resp = Response(status_code=204)
+    clear_session_cookies(resp)
+    return resp

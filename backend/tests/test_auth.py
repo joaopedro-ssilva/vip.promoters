@@ -65,7 +65,8 @@ async def test_promoter_register_username_rules(client):
     assert r.status_code == 201
     assert r.json()["user"]["promoter_profile"]["instagram_username"] == "bia.promo"
     r = await client.post(f"{API}/auth/register", json=body | {"email": "c@test.com"})
-    assert r.status_code == 409 and error_code(r) == "instagram_username_taken"
+    # @ cadastrado e NAO verificado: 409 com a opcao de disputa (ver test_verification.py)
+    assert r.status_code == 409 and error_code(r) == "instagram_username_claimable"
     r = await client.post(
         f"{API}/auth/register",
         json=body | {"email": "d@test.com", "instagram_username": "invalido!!"},

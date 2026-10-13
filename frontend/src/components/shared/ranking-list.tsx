@@ -1,7 +1,7 @@
 import { Medal, Trophy } from "lucide-react";
 import { Avatar } from "@/components/ui/misc";
 import { cn } from "@/lib/cn";
-import { formatOrdinal, formatPoints } from "@/lib/format";
+import { formatOrdinal, formatPoints, atHandle } from "@/lib/format";
 import type { LeaderboardEntry } from "@/lib/api/types";
 
 export function RankingList({ entries, meMembershipId }: { entries: LeaderboardEntry[]; meMembershipId?: string | null }) {
@@ -39,7 +39,7 @@ export function RankingList({ entries, meMembershipId }: { entries: LeaderboardE
                 {e.name}
                 {me && <span className="ml-2 text-label text-success">Você</span>}
               </p>
-              <p className="text-caption text-ink-muted">@{e.instagram_username}</p>
+              <p className="text-caption text-ink-muted">{atHandle(e.instagram_username)}</p>
             </div>
             <p className="ml-auto text-label tabular-nums text-ink">{formatPoints(e.points)}</p>
           </li>

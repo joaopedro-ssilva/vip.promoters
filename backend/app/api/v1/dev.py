@@ -15,6 +15,7 @@ from app.core.config import settings
 from app.core.errors import AppError
 from app.core.rate_limit import check_rate_limit
 from app.schemas.models import InteractionEnvelope, SimulateCommentIn, SimulateStoryIn
+from app.services import verification
 from app.services.campaigns import get_org_campaign, require_account
 from app.services.instagram.mock import MOCK_SCOPED_PREFIX, mock_store_comment
 from app.services.interactions import normalize_username, process_event
@@ -91,6 +92,15 @@ async def simulate_comment(body: SimulateCommentIn, ctx: Manager, db: DB):
             }
         ],
     }
+    if verification.find_code(body.text):
+        for ev in parse_payload(payload):
+            await process_event(db, ev)
+        raise AppError(
+            400,
+            "verification_comment",
+            "Comentário de verificação recebido. Ele não pontua; se o código e o @ batem, "
+            "o @ foi verificado.",
+        )
     it = await _run(db, payload)
     return InteractionEnvelope(interaction=await load_interaction(db, it.id))
 

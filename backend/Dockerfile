@@ -26,7 +26,9 @@ COPY --from=builder-dev /opt/venv /opt/venv
 COPY --chown=app:app . /app
 USER app
 EXPOSE 8000
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log"]
+# Migracoes rodam no servico `migrate` (python -m app.cli preparar-banco), com o dono das
+# tabelas; aqui o app sobe com o papel de aplicacao.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
 
 # Imagem final de producao
 FROM runtime-base AS runtime
@@ -34,4 +36,4 @@ COPY --from=builder-prod /opt/venv /opt/venv
 COPY --chown=app:app . /app
 USER app
 EXPOSE 8000
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]

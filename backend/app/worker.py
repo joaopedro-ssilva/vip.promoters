@@ -9,12 +9,13 @@ from arq.connections import RedisSettings
 from sqlalchemy import select, update
 
 from app.core.config import settings
-from app.core.crypto import decrypt, encrypt
+from app.core.crypto import decrypt, encrypt, rotate
 from app.core.db import SessionLocal, engine
 from app.core.logging import setup_logging
 from app.core.redis import close_redis
 from app.models import Campaign, InstagramAccount, Organization
 from app.models.base import AccountStatus, CampaignStatus
+from app.services import retention
 from app.services.campaigns import sync_campaign
 from app.services.instagram import close_instagram_client, get_instagram_client
 from app.services.instagram.base import InstagramAuthError, InstagramError
@@ -92,7 +93,7 @@ async def end_expired_campaigns(ctx: dict[str, Any]) -> int:
                 Campaign.ends_at.is_not(None),
                 Campaign.ends_at < datetime.now(UTC),
             )
-            .values(status=CampaignStatus.ended.value)
+            .values(status=CampaignStatus.ended.value, ended_at=Campaign.ends_at)
         )
         await db.commit()
         return res.rowcount or 0
@@ -162,6 +163,35 @@ async def retry_webhook_subscriptions(ctx: dict[str, Any]) -> int:
     return done
 
 
+async def rotate_encrypted_tokens(ctx: dict[str, Any]) -> int:
+    """Recifra os tokens do Instagram com a TOKEN_ENCRYPTION_KEY atual. So roda quando ha
+    chave anterior configurada (rotacao em andamento)."""
+    if not settings.token_encryption_key_previous.strip():
+        return 0
+    done = 0
+    async with SessionLocal() as db:
+        accounts = (await db.execute(select(InstagramAccount))).scalars().all()
+        for account in accounts:
+            try:
+                new = rotate(account.access_token_enc)
+            except ValueError:
+                log.warning("token ilegivel na rotacao", extra={"event": "rotate"})
+                continue
+            if new != account.access_token_enc:
+                account.access_token_enc = new
+                done += 1
+        await db.commit()
+    log.info("tokens recifrados: %d", done, extra={"event": "rotate"})
+    return done
+
+
+async def apply_retention(ctx: dict[str, Any]) -> int:
+    """Politica de retencao diaria (ver app/services/retention.py)."""
+    async with SessionLocal() as db:
+        res = await retention.purge(db)
+    return res.interactions_anonymized
+
+
 async def startup(ctx: dict[str, Any]) -> None:
     setup_logging()
 
@@ -179,6 +209,8 @@ class WorkerSettings:
         cron(end_expired_campaigns, second=30, run_at_startup=True),
         cron(refresh_tokens, minute=7, second=0, run_at_startup=True),
         cron(retry_webhook_subscriptions, minute={3, 13, 23, 33, 43, 53}, second=15),
+        cron(rotate_encrypted_tokens, hour=4, minute=17, second=0, run_at_startup=True),
+        cron(apply_retention, hour=5, minute=11, second=0, timeout=600),
     ]
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
     on_startup = startup

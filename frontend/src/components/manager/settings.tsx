@@ -13,6 +13,7 @@ import { CheckboxField, FormError, TextField } from "@/components/ui/fields";
 import { Card, PageHeader } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
 import { ChangePasswordDialog } from "@/components/shared/change-password-dialog";
+import { DeleteAccountSection } from "@/components/shared/delete-account";
 import { authApi } from "@/lib/api/auth";
 import { organizationApi } from "@/lib/api/manager";
 import type { User } from "@/lib/api/types";
@@ -86,6 +87,8 @@ export function SettingsPage() {
           {leaving ? "Saindo…" : "Sair da conta"}
         </Button>
       </div>
+
+      <DeleteAccountSection role="manager" />
 
       <ChangePasswordDialog open={pw} onClose={() => setPw(false)} />
     </div>

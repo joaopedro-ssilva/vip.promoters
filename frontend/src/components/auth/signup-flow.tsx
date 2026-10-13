@@ -5,12 +5,13 @@ import { useMutation } from "@tanstack/react-query";
 import { ArrowLeft, Check, Ticket, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { FormError, PasswordField, TextField } from "@/components/ui/fields";
-import { authApi } from "@/lib/api/auth";
+import { authApi, type RegisterInput } from "@/lib/api/auth";
+import { ApiError } from "@/lib/api/client";
 import type { Role } from "@/lib/api/types";
 import { cn } from "@/lib/cn";
 import { applyServerError } from "@/lib/form";
@@ -146,6 +147,13 @@ function DetailsStep({ role, convite, next, onBack }: { role: Role; convite: str
   const router = useRouter();
   const { setUser } = useAuth();
   const [formError, setFormError] = useState<string | null>(null);
+  // the @ belongs to someone else who never verified it: offer to dispute it
+  const [claimable, setClaimable] = useState<RegisterInput | null>(null);
+  // the submit button is replaced by the dispute box: keep keyboard focus there
+  const claimRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (claimable) claimRef.current?.focus();
+  }, [claimable]);
 
   const form = useForm<Values>({
     resolver: zodResolver(schemaFor(role)),
@@ -158,13 +166,23 @@ function DetailsStep({ role, convite, next, onBack }: { role: Role; convite: str
     mutationFn: authApi.register,
     onSuccess: (user) => {
       setUser(user);
-      const fallback = user.role === "manager" ? "/gestor" : convite ? "/promoter" : "/promoter/perfil";
+      // a disputed @ must be proven first: the verification code lives on the profile page
+      const proving = user.role === "promoter" && !user.promoter_profile?.instagram_username;
+      const fallback =
+        user.role === "manager" ? "/gestor" : convite && !proving ? "/promoter" : "/promoter/perfil";
       const dest = safeNext(next, fallback);
       // never send a promoter to /gestor (or vice versa): fall back to the role's home
       const ok = dest.startsWith(homeFor(user));
       router.replace(ok ? dest : fallback);
     },
-    onError: (err) => {
+    onError: (err, body) => {
+      if (err instanceof ApiError && err.code === "instagram_username_claimable") {
+        setClaimable(body);
+        form.setError("instagram_username", { type: "server", message: err.message });
+        setFormError(null);
+        return;
+      }
+      setClaimable(null);
       setFormError(
         applyServerError(err, form.setError, ["name", "email", "password", "organization_name", "instagram_username", "invite_code"]),
       );
@@ -248,9 +266,42 @@ function DetailsStep({ role, convite, next, onBack }: { role: Role; convite: str
             />
           </>
         )}
-        <Button type="submit" block loading={register.isPending}>
-          {register.isPending ? "Criando conta…" : "Criar conta"}
-        </Button>
+        <p className="text-caption text-ink-muted">
+          Ao criar a conta, você concorda com os{" "}
+          <Link href="/termos" className="text-success underline">
+            Termos de Uso
+          </Link>{" "}
+          e a{" "}
+          <Link href="/privacidade" className="text-success underline">
+            Política de Privacidade
+          </Link>
+          .
+        </p>
+        {claimable ? (
+          <div
+            ref={claimRef}
+            tabIndex={-1}
+            role="alert"
+            className="flex flex-col gap-3 rounded-control border border-violet-border bg-violet-soft p-4 outline-none"
+          >
+            <p className="text-label text-ink">
+              Esse @ é seu? Crie a conta assim mesmo. Você entra sem o @ e, em seguida, prova pelo Instagram
+              comentando um código. Quando a prova chegar, o @ passa para você.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button loading={register.isPending} onClick={() => register.mutate({ ...claimable, claim_username: true })}>
+                É meu: criar conta e provar
+              </Button>
+              <Button variant="ghost" onClick={() => setClaimable(null)}>
+                Usar outro @
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button type="submit" block loading={register.isPending}>
+            {register.isPending ? "Criando conta…" : "Criar conta"}
+          </Button>
+        )}
       </form>
     </AuthCard>
   );

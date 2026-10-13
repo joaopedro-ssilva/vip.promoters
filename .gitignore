@@ -30,3 +30,6 @@ Thumbs.db
 
 # Redis local
 dump.rdb
+
+# backups locais do banco
+backups/

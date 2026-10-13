@@ -1,9 +1,15 @@
 name: vip-promoters
 
+# O app conecta com o PAPEL DE APLICACAO (APP_DB_USER/APP_DB_PASSWORD do .env): sem
+# superusuario, sem BYPASSRLS e sem ser dono das tabelas, para o Row Level Security valer.
+# O backend monta a URL do banco a partir dessas partes (nenhuma senha em URL aqui). A senha
+# do dono (POSTGRES_PASSWORD) e apagada nos containers do app: so o `migrate` a recebe.
 x-backend-env: &backend-env
   env_file: .env
   environment:
-    DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-vip}:${POSTGRES_PASSWORD:-vip}@db:5432/${POSTGRES_DB:-vip}
+    DB_HOST: db
+    POSTGRES_DB: ${POSTGRES_DB:-vip}
+    POSTGRES_PASSWORD: ""
     REDIS_URL: redis://redis:6379/0
     UPLOAD_DIR: /data/uploads
 
@@ -13,7 +19,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-vip}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vip}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB:-vip}
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -33,9 +39,23 @@ services:
       timeout: 3s
       retries: 10
 
-  backend:
+  # Migracoes + papel de aplicacao. Roda e sai; o backend so sobe depois que ele termina.
+  migrate:
     build:
       context: ./backend
+    image: vip-promoters-backend
+    restart: "no"
+    env_file: .env  # POSTGRES_PASSWORD e APP_DB_PASSWORD vem daqui
+    environment:
+      DB_HOST: db
+      POSTGRES_USER: ${POSTGRES_USER:-vip}
+      POSTGRES_DB: ${POSTGRES_DB:-vip}
+    command: ["python", "-m", "app.cli", "preparar-banco"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  backend:
     image: vip-promoters-backend
     restart: unless-stopped
     <<: *backend-env
@@ -44,12 +64,12 @@ services:
     volumes:
       - uploads:/data/uploads
     depends_on:
-      db:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=3).status == 200 else 1)"]
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/ready', timeout=3).status == 200 else 1)"]
       interval: 10s
       timeout: 5s
       start_period: 40s

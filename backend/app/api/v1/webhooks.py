@@ -5,17 +5,17 @@ import hashlib
 import hmac
 import json
 import logging
-import secrets
 from typing import Any
 
 from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import PlainTextResponse
-from sqlalchemy import delete, update
+from sqlalchemy import select, update
 
 from app.api.deps import DB
 from app.core.config import settings
 from app.core.errors import AppError
-from app.models import InstagramAccount, PromoterProfile
+from app.models import DataDeletionRequest, InstagramAccount
+from app.services import privacy
 from app.services.webhooks import sanitize_payload, verify_signature
 
 log = logging.getLogger("app.webhooks")
@@ -102,23 +102,29 @@ async def deauthorize(db: DB, signed_request: str = Form(..., max_length=4096)):
 
 @router.post("/meta/data-deletion")
 async def data_deletion(db: DB, signed_request: str = Form(..., max_length=4096)):
+    """Exclusao de dados pedida pela pessoa no Instagram. Atende NA HORA (conexao, midia
+    dos posts e identificacao nas interacoes) e registra o pedido com um codigo que ela
+    pode consultar."""
     data = _parse_signed_request(signed_request)
-    user_id = str(data.get("user_id") or "")
-    if user_id:
-        await db.execute(delete(InstagramAccount).where(InstagramAccount.ig_user_id == user_id))
-        await db.execute(
-            update(PromoterProfile)
-            .where(PromoterProfile.ig_scoped_id == user_id)
-            .values(ig_scoped_id=None, verified=False, verified_at=None, verification_method=None)
-        )
-        await db.commit()
-    code = secrets.token_urlsafe(12)
+    req = await privacy.handle_meta_data_deletion(db, str(data.get("user_id") or ""))
     return {
-        "url": f"{settings.app_base_url}/api/v1/meta/data-deletion/{code}",
-        "confirmation_code": code,
+        "url": f"{settings.app_base_url}/api/v1/meta/data-deletion/{req.confirmation_code}",
+        "confirmation_code": req.confirmation_code,
     }
 
 
 @router.get("/meta/data-deletion/{code}")
-async def data_deletion_status(code: str):
-    return {"status": "completed", "confirmation_code": code[:64]}
+async def data_deletion_status(code: str, db: DB):
+    req = (
+        await db.execute(
+            select(DataDeletionRequest).where(DataDeletionRequest.confirmation_code == code[:32])
+        )
+    ).scalar_one_or_none()
+    if req is None:
+        raise AppError(404, "not_found", "Pedido de exclusão não encontrado.")
+    return {
+        "status": req.status,
+        "confirmation_code": req.confirmation_code,
+        "requested_at": req.requested_at.isoformat(),
+        "completed_at": req.completed_at.isoformat() if req.completed_at else None,
+    }

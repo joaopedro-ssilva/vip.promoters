@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link2, RotateCw, UserRoundSearch, Users } from "lucide-react";
+import { BadgeCheck, Link2, RotateCw, UserRoundSearch, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -16,7 +16,7 @@ import { useToast } from "@/components/ui/toast";
 import { errorMessage } from "@/lib/api/client";
 import { teamApi } from "@/lib/api/manager";
 import type { Member, MembershipStatus } from "@/lib/api/types";
-import { formatDate, formatNumber, formatPoints } from "@/lib/format";
+import { formatDate, formatNumber, formatPoints, atHandle } from "@/lib/format";
 import { applyServerError } from "@/lib/form";
 import { keys } from "@/lib/queries";
 import { safeUrl } from "@/lib/safe-url";
@@ -253,7 +253,8 @@ export function TeamPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-label font-normal [overflow-wrap:anywhere]">@{m.promoter.instagram_username}</td>
+                    <td className="px-4 py-3 text-label font-normal [overflow-wrap:anywhere]">{atHandle(m.promoter.instagram_username)}
+                      <VerifiedMark verified={m.promoter.verified} /></td>
                     <td className="px-4 py-3">
                       <StatusBadge kind={m.status} />
                     </td>
@@ -278,7 +279,8 @@ export function TeamPage() {
                   <Avatar name={m.promoter.name} />
                   <div className="min-w-0 flex-1">
                     <p className="text-body font-bold [overflow-wrap:anywhere]">{m.promoter.name}</p>
-                    <p className="text-label font-normal text-ink-secondary [overflow-wrap:anywhere]">@{m.promoter.instagram_username}</p>
+                    <p className="text-label font-normal text-ink-secondary [overflow-wrap:anywhere]">{atHandle(m.promoter.instagram_username)}
+                      <VerifiedMark verified={m.promoter.verified} /></p>
                   </div>
                   <StatusBadge kind={m.status} />
                 </div>
@@ -442,5 +444,16 @@ function AdjustForm({ member, onClose, onDone }: { member: Member; onClose: () =
         </Button>
       </DialogActions>
     </form>
+  );
+}
+
+/** O gestor aprova com mais segurança quando o @ foi provado pelo Instagram. */
+function VerifiedMark({ verified }: { verified: boolean }) {
+  if (!verified) return null;
+  return (
+    <span title="@ verificado pelo Instagram" className="ml-1 inline-flex align-[-0.2em] text-success">
+      <BadgeCheck aria-hidden="true" strokeWidth={1.75} className="size-4" />
+      <span className="sr-only">(verificado)</span>
+    </span>
   );
 }

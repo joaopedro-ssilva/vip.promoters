@@ -13,6 +13,7 @@ import type {
   PromoterReward,
   Redemption,
   User,
+  Verification,
 } from "./types";
 
 export const invitesApi = {
@@ -26,6 +27,10 @@ export const promoterApi = {
   leave: (id: string) => api.delete<void>(`/promoter/memberships/${id}`),
   updateProfile: (body: { instagram_username: string }) =>
     api.patch<{ user: User }>("/promoter/profile", body).then((r) => r.user),
+  verification: () => api.get<Verification>("/promoter/verification"),
+  startVerification: () => api.post<Verification>("/promoter/verification"),
+  claimUsername: (instagram_username: string) =>
+    api.post<Verification>("/promoter/username-claims", { instagram_username }),
   home: (orgId: string) => api.get<PromoterHome>("/promoter/home", { org_id: orgId }),
   campaigns: (orgId: string, status: "active" | "ended") =>
     api.get<Paginated<PromoterCampaign>>("/promoter/campaigns", {

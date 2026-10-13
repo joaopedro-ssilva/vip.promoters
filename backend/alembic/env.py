@@ -10,9 +10,13 @@ config = context.config
 target_metadata = Base.metadata
 
 
+# Migracao roda com o DONO das tabelas; o app conecta com o papel de aplicacao.
+MIGRATION_URL = settings.db_admin_url or settings.db_url
+
+
 def run_migrations_offline() -> None:
     context.configure(
-        url=settings.database_url,
+        url=MIGRATION_URL,
         target_metadata=target_metadata,
         literal_binds=True,
         compare_type=True,
@@ -28,7 +32,7 @@ def _do_run(connection) -> None:
 
 
 async def run_async() -> None:
-    engine = create_async_engine(settings.database_url)
+    engine = create_async_engine(MIGRATION_URL)
     async with engine.connect() as connection:
         await connection.run_sync(_do_run)
     await engine.dispose()

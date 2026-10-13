@@ -2,11 +2,13 @@ import uuid
 from datetime import UTC, date, datetime, timedelta
 
 from fastapi import APIRouter, Query, Response
+from fastapi.responses import JSONResponse
 from sqlalchemy import Date, cast, func, select, update
 
 from app.api.deps import DB, CurrentUser, Manager
 from app.core.config import settings
 from app.core.errors import not_found
+from app.core.redis import get_redis
 from app.models import (
     Campaign,
     InstagramAccount,
@@ -38,7 +40,29 @@ async def config():
 
 @router.get("/health")
 async def health():
+    """Vivo (liveness): o processo responde. Nao toca banco nem Redis."""
     return {"status": "ok"}
+
+
+@router.get("/health/ready")
+async def ready(db: DB):
+    """Pronto (readiness): banco e Redis respondem. 503 se algum falhar, para o
+    orquestrador tirar a instancia do balanceador em vez de servir erro."""
+    checks: dict[str, str] = {}
+    try:
+        await db.execute(select(1))
+        checks["database"] = "ok"
+    except Exception:  # noqa: BLE001
+        checks["database"] = "error"
+    try:
+        await get_redis().ping()
+        checks["redis"] = "ok"
+    except Exception:  # noqa: BLE001
+        checks["redis"] = "error"
+    ok = all(v == "ok" for v in checks.values())
+    return JSONResponse(
+        {"status": "ok" if ok else "error", **checks}, status_code=200 if ok else 503
+    )
 
 
 # ------------------------------------------------------------------ dashboard

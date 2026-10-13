@@ -11,6 +11,7 @@ from sqlalchemy import exists, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import rls
 from app.core.crypto import decrypt
 from app.models import (
     Campaign,
@@ -27,6 +28,7 @@ from app.models.base import (
     InteractionType,
     TxType,
 )
+from app.services import verification
 from app.services.instagram import get_instagram_client
 from app.services.instagram.base import (
     InstagramAuthError,
@@ -366,14 +368,18 @@ async def _resolve_story_username(account: InstagramAccount, scoped_id: str) -> 
 
 
 async def process_event(db: AsyncSession, ev: InboundEvent) -> PipelineResult:
-    """Unica porta de entrada para comentarios e mencoes em story. Faz commit."""
-    try:
-        result = await _process(db, ev)
-        await db.commit()
-        return result
-    except Exception:
-        await db.rollback()
-        raise
+    """Unica porta de entrada para comentarios e mencoes em story. Faz commit.
+
+    Roda em modo SISTEMA mesmo quando chamado de uma rota do gestor (simulador, sync): o
+    evento vem da Meta e pode tocar outra organizacao (ex.: verificacao do @)."""
+    async with rls.system(db):
+        try:
+            result = await _process(db, ev)
+            await db.commit()
+            return result
+        except Exception:
+            await db.rollback()
+            raise
 
 
 async def _process(db: AsyncSession, ev: InboundEvent) -> PipelineResult:
@@ -394,9 +400,15 @@ async def _process(db: AsyncSession, ev: InboundEvent) -> PipelineResult:
 async def _process_comment(
     db: AsyncSession, ev: InboundEvent, account: InstagramAccount, org: Organization
 ) -> PipelineResult:
+    username = normalize_username(ev.from_username)
+    code = verification.find_code(ev.text)
+    if code is not None:
+        # Comentario de verificacao do @ (em qualquer post da conta): prova de posse, nao
+        # participacao. Nunca pontua e nao e guardado.
+        await verification.confirm_by_comment(db, code, username, ev.from_id)
+        return PipelineResult("dropped")
     if ev.parent_id or not ev.media_id:
         return PipelineResult("dropped")
-    username = normalize_username(ev.from_username)
     if (ev.from_id and ev.from_id == account.ig_user_id) or (
         username and username == account.username.lower()
     ):

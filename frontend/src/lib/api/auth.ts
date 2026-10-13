@@ -8,6 +8,7 @@ export interface RegisterInput {
   role: Role;
   organization_name?: string;
   instagram_username?: string;
+  claim_username?: boolean;
   invite_code?: string;
 }
 
@@ -23,4 +24,6 @@ export const authApi = {
     api.patch<{ user: User }>("/auth/me", body).then((r) => r.user),
   changePassword: (body: { current_password: string; new_password: string }) =>
     api.post<void>("/auth/change-password", body),
+  deleteAccount: (body: { password: string; confirmation: string }) =>
+    api.post<void>("/auth/delete-account", body),
 };

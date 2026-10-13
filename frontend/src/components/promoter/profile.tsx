@@ -2,10 +2,9 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { BadgeCheck, CircleAlert, CircleCheck, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -16,9 +15,8 @@ import { ErrorState, Skeleton } from "@/components/ui/feedback";
 import { FormError, TextField } from "@/components/ui/fields";
 import { Avatar, Card, PageHeader } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
-import { IG_REASONS } from "@/components/manager/instagram";
 import { ChangePasswordDialog } from "@/components/shared/change-password-dialog";
-import { useConnectInstagram } from "@/components/shared/use-connect-instagram";
+import { DeleteAccountSection } from "@/components/shared/delete-account";
 import { authApi } from "@/lib/api/auth";
 import { errorMessage } from "@/lib/api/client";
 import { promoterApi } from "@/lib/api/promoter";
@@ -30,50 +28,20 @@ import { useTheme } from "@/lib/theme";
 import { igUsernameSchema, nameSchema, normalizeIgUsername } from "@/lib/validation";
 import { JoinTeamForm } from "./join-team";
 import { useTeam } from "./team-provider";
+import { VerificationPanel } from "./verification";
 
 const schema = z.object({ name: nameSchema, instagram_username: igUsernameSchema });
 type Values = z.infer<typeof schema>;
 
 export function PromoterProfile() {
-  const { user, setUser, logout } = useAuth();
-  const params = useSearchParams();
-  const returned = params.get("status");
-  const reason = params.get("reason");
+  const { logout } = useAuth();
   const [pw, setPw] = useState(false);
   const [theme, setTheme] = useTheme();
   const [leaving, setLeaving] = useState(false);
 
-  // back from the Instagram verification: the result lives in promoter_profile.verified
-  useEffect(() => {
-    if (!returned) return;
-    let cancelled = false;
-    authApi
-      .me()
-      .then((u) => !cancelled && setUser(u))
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [returned, setUser]);
-
-  if (!user) return null;
-
   return (
     <div className="mx-auto flex max-w-reading flex-col gap-8">
       <PageHeader title="Perfil" className="mb-0" />
-
-      {returned === "connected" && (
-        <p role="status" className="flex items-start gap-2 rounded-control border border-success bg-surface-raised p-3 text-label text-success">
-          <CircleCheck aria-hidden="true" strokeWidth={1.75} className="mt-0.5 size-4 shrink-0" />
-          Verificação concluída. Seu @ foi confirmado com o Instagram.
-        </p>
-      )}
-      {returned === "error" && (
-        <p role="alert" className="flex items-start gap-2 rounded-control border border-danger bg-surface-raised p-3 text-label text-danger">
-          <CircleAlert aria-hidden="true" strokeWidth={1.75} className="mt-0.5 size-4 shrink-0" />
-          <span className="min-w-0">Não foi possível verificar com o Instagram. {reason ? (IG_REASONS[reason] ?? "Tente novamente em instantes.") : ""}</span>
-        </p>
-      )}
 
       <ProfileForm />
       <Teams />
@@ -120,6 +88,7 @@ export function PromoterProfile() {
           </div>
         </div>
       </Card>
+      <DeleteAccountSection role="promoter" />
       <ChangePasswordDialog open={pw} onClose={() => setPw(false)} />
     </div>
   );
@@ -129,11 +98,9 @@ function ProfileForm() {
   const { user, setUser } = useAuth();
   const toast = useToast();
   const qc = useQueryClient();
-  const connect = useConnectInstagram();
   const [formError, setFormError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<Values | null>(null);
   const currentIg = user?.promoter_profile?.instagram_username ?? "";
-  const verified = user?.promoter_profile?.verified ?? false;
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -197,24 +164,7 @@ function ProfileForm() {
       </form>
 
       <div className="mt-6 border-t border-line-subtle pt-4">
-        <p className="flex items-center gap-2 text-label">
-          {verified ? (
-            <>
-              <BadgeCheck aria-hidden="true" strokeWidth={1.75} className="size-5 text-success" />
-              <span className="text-success">@ verificado com o Instagram</span>
-            </>
-          ) : (
-            <span className="text-ink-secondary">@ ainda não verificado (opcional)</span>
-          )}
-        </p>
-        {!verified && (
-          <>
-            <p className="mt-1 text-caption text-ink-muted">A verificação funciona para contas profissionais e ocorre na Meta, sem informar senha por aqui.</p>
-            <Button variant="secondary" className="mt-3" loading={connect.isPending} onClick={() => connect.mutate()}>
-              {connect.isPending ? "Conectando…" : "Verificar com Instagram"}
-            </Button>
-          </>
-        )}
+        <VerificationPanel />
       </div>
 
       <ConfirmDialog
@@ -222,7 +172,7 @@ function ProfileForm() {
         onClose={() => setConfirm(null)}
         onConfirm={() => confirm && save.mutate(confirm)}
         title="Alterar o @ do Instagram?"
-        description="Ao alterar o @, suas participações em equipes voltam para análise até o gestor aprovar de novo, e a verificação com o Instagram é refeita. Seu saldo de pontos é mantido. Interações antigas feitas com outra conta não são transferidas automaticamente."
+        description="Ao alterar o @, suas participações em equipes voltam para análise até o gestor aprovar de novo, e a verificação do @ precisa ser refeita. Seu saldo de pontos é mantido. Interações antigas feitas com outra conta não são transferidas automaticamente."
         confirmLabel="Alterar @"
         loadingLabel="Salvando…"
         loading={save.isPending}

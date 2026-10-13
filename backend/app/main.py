@@ -20,6 +20,12 @@ log = logging.getLogger("app")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.arq = None
+    # RLS so vale se o app NAO conecta como superusuario/dono: em producao, recusa subir.
+    from app.core.db import SessionLocal
+    from app.core.rls import check_database_role
+
+    async with SessionLocal() as db:
+        await check_database_role(db, strict=settings.is_production)
     try:
         app.state.arq = await create_pool(RedisSettings.from_dsn(settings.redis_url))
     except Exception:

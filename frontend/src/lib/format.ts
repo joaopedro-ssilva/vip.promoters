@@ -153,3 +153,8 @@ export function isFuture(iso: string | null | undefined): boolean {
 export function expiresWithinDays(iso: string | null | undefined, days: number): boolean {
   return !!iso && new Date(iso).getTime() - Date.now() < days * 86_400_000;
 }
+
+/** "@user", or a neutral label while the promoter is still proving a disputed @. */
+export function atHandle(username: string | null | undefined): string {
+  return username ? `@${username}` : "@ em verificação";
+}

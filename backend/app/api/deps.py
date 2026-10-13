@@ -6,6 +6,7 @@ from fastapi import Depends, Query, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import rls
 from app.core.db import get_db
 from app.core.errors import AppError
 from app.core.security import ACCESS_COOKIE, decode_access_token
@@ -27,6 +28,16 @@ async def current_user(request: Request, db: DB) -> User:
     user = await db.get(User, user_id)
     if user is None or not user.is_active:
         raise AppError(401, "unauthenticated", "Faça login para continuar.")
+    # RLS: daqui em diante a transacao so enxerga as organizacoes deste usuario (a dele,
+    # se gestor; as equipes em que tem participacao, se promoter).
+    org_ids = (
+        await db.execute(
+            select(Organization.id)
+            .where(Organization.owner_id == user.id)
+            .union(select(Membership.organization_id).where(Membership.promoter_id == user.id))
+        )
+    ).scalars()
+    await rls.set_tenant(db, user.id, org_ids)
     return user
 
 
