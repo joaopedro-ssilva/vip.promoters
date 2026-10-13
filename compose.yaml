@@ -17,7 +17,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-vip}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vip}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
       POSTGRES_DB: ${POSTGRES_DB:-vip}
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -46,7 +46,7 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgresql+asyncpg://${APP_DB_USER:-vip_app}:${APP_DB_PASSWORD:?defina APP_DB_PASSWORD no .env}@db:5432/${POSTGRES_DB:-vip}
-      DATABASE_URL_ADMIN: postgresql+asyncpg://${POSTGRES_USER:-vip}:${POSTGRES_PASSWORD:-vip}@db:5432/${POSTGRES_DB:-vip}
+      DATABASE_URL_ADMIN: postgresql+asyncpg://${POSTGRES_USER:-vip}:${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}@db:5432/${POSTGRES_DB:-vip}
       APP_DB_USER: ${APP_DB_USER:-vip_app}
       APP_DB_PASSWORD: ${APP_DB_PASSWORD}
     command: ["python", "-m", "app.cli", "preparar-banco"]

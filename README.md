@@ -48,7 +48,7 @@ Regra prática para os promoters: "reposte no story **e marque o @**". Sem a mar
 Requisito: Docker Desktop. Não é preciso ter Python nem Node instalados.
 
 ```bash
-cp .env.example .env     # preencha SECRET_KEY, TOKEN_ENCRYPTION_KEY, META_WEBHOOK_VERIFY_TOKEN e APP_DB_PASSWORD
+cp .env.example .env     # preencha SECRET_KEY, TOKEN_ENCRYPTION_KEY, META_WEBHOOK_VERIFY_TOKEN, POSTGRES_PASSWORD e APP_DB_PASSWORD
 docker compose up -d --build
 ```
 
@@ -62,8 +62,10 @@ Gerar valores para os segredos:
 openssl rand -hex 32                           # SECRET_KEY
 openssl rand -base64 32 | tr '+/' '-_'         # TOKEN_ENCRYPTION_KEY
 openssl rand -hex 16                           # META_WEBHOOK_VERIFY_TOKEN
-openssl rand -hex 24                           # APP_DB_PASSWORD
+openssl rand -hex 24                           # POSTGRES_PASSWORD e APP_DB_PASSWORD (um valor para cada)
 ```
+
+O compose não tem senha padrão de banco: sem `POSTGRES_PASSWORD` e `APP_DB_PASSWORD` no `.env`, ele se recusa a subir. Se você já tem o volume do Postgres criado com a senha antiga (`vip`), use essa mesma senha em `POSTGRES_PASSWORD`; o Postgres só define a senha na primeira criação do volume.
 
 ### Logins de demonstração
 
@@ -314,7 +316,7 @@ Fora do Docker, com um Postgres e um Redis locais (o usuário do `DATABASE_URL_A
 
 ```bash
 cd backend
-DATABASE_URL_ADMIN=postgresql+asyncpg://vip:vip@localhost:5432/vip REDIS_URL=redis://localhost:6379/0 uv run pytest -q
+DATABASE_URL_ADMIN=postgresql+asyncpg://USUARIO:SENHA@localhost:5432/vip REDIS_URL=redis://localhost:6379/0 uv run pytest -q
 ```
 
 Os testes criam o banco `vip_test`, rodam `python -m app.cli preparar-banco` e usam o app com o **papel de aplicação**: o RLS vale de verdade nos testes. A suíte tem 133 testes: autenticação, isolamento entre organizações, regras de pontuação, concorrência, resgates, webhooks e uploads. O frontend não tem testes automatizados; os fluxos de tela foram verificados manualmente em navegador. Veja [frontend/README.md](frontend/README.md).

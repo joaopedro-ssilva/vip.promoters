@@ -463,7 +463,7 @@ otherwise 403 `membership_not_approved`.
 ENVIRONMENT=development            # development | production
 APP_URL=http://localhost:3000      # public URL of the frontend (used for redirects, invite links, upload URLs)
 ALLOWED_ORIGINS=http://localhost:3000
-DATABASE_URL=postgresql+asyncpg://vip:vip@db:5432/vip
+DATABASE_URL=postgresql+asyncpg://USUARIO:SENHA@db:5432/vip
 REDIS_URL=redis://redis:6379/0
 SECRET_KEY=                        # JWT + state signing
 TOKEN_ENCRYPTION_KEY=              # Fernet key

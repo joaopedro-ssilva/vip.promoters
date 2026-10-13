@@ -2,6 +2,7 @@
 
 import asyncio
 import os
+import secrets
 import subprocess
 import sys
 import tempfile
@@ -10,14 +11,18 @@ from pathlib import Path
 # ---- ambiente de teste: definido ANTES de importar a aplicacao ----------------------
 # DATABASE_URL_ADMIN (ou, na falta, DATABASE_URL) e um papel que cria bancos e papeis. O app
 # roda nos testes com o PAPEL DE APLICACAO, como em producao: o RLS vale de verdade aqui.
-_admin_url = os.environ.get("DATABASE_URL_ADMIN") or os.environ.get(
-    "DATABASE_URL", "postgresql+asyncpg://vip:vip@db:5432/vip"
-)
+_admin_url = os.environ.get("DATABASE_URL_ADMIN") or os.environ.get("DATABASE_URL")
+if not _admin_url:
+    raise RuntimeError(
+        "Defina DATABASE_URL_ADMIN (um usuario do Postgres que cria bancos e papeis) "
+        "para rodar os testes."
+    )
 TEST_DB = "vip_test"
 # Papel PROPRIO dos testes: papeis valem para o servidor inteiro, e reaproveitar o vip_app
 # trocaria a senha do papel que o app de desenvolvimento usa no mesmo Postgres.
 APP_DB_USER = os.environ.get("TEST_APP_DB_USER", "vip_test_app")
-APP_DB_PASSWORD = os.environ.get("TEST_APP_DB_PASSWORD") or "vip_test_app"
+# senha nova a cada execucao: o papel e recriado pelo preparar-banco logo abaixo
+APP_DB_PASSWORD = os.environ.get("TEST_APP_DB_PASSWORD") or secrets.token_hex(16)
 _server = _admin_url.split("@", 1)[1].rsplit("/", 1)[0]
 TEST_ADMIN_URL = _admin_url.rsplit("/", 1)[0] + "/" + TEST_DB
 TEST_URL = f"postgresql+asyncpg://{APP_DB_USER}:{APP_DB_PASSWORD}@{_server}/{TEST_DB}"
