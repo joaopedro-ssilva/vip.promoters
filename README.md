@@ -312,11 +312,11 @@ docker compose -f compose.yaml -f compose.dev.yaml run --rm tests
 docker compose -f compose.yaml -f compose.dev.yaml run --rm tests ruff check .
 ```
 
-Fora do Docker, com um Postgres e um Redis locais (o usuário do `DATABASE_URL_ADMIN` precisa poder criar bancos e papéis):
+Fora do Docker, com um Postgres e um Redis locais (o `POSTGRES_USER` precisa poder criar bancos e papéis):
 
 ```bash
 cd backend
-DATABASE_URL_ADMIN=postgresql+asyncpg://USUARIO:SENHA@localhost:5432/vip REDIS_URL=redis://localhost:6379/0 uv run pytest -q
+POSTGRES_USER="$PGUSER" POSTGRES_PASSWORD="$PGPASSWORD" DB_HOST=localhost REDIS_URL=redis://localhost:6379/0 uv run pytest -q
 ```
 
 Os testes criam o banco `vip_test`, rodam `python -m app.cli preparar-banco` e usam o app com o **papel de aplicação**: o RLS vale de verdade nos testes. A suíte tem 133 testes: autenticação, isolamento entre organizações, regras de pontuação, concorrência, resgates, webhooks e uploads. O frontend não tem testes automatizados; os fluxos de tela foram verificados manualmente em navegador. Veja [frontend/README.md](frontend/README.md).
@@ -336,13 +336,16 @@ META_APP_SECRET=...
 SECRET_KEY=...
 TOKEN_ENCRYPTION_KEY=...
 META_WEBHOOK_VERIFY_TOKEN=...
+DB_HOST=...                    # fora do compose (no compose é "db")
 POSTGRES_PASSWORD=...          # dono das tabelas: só o serviço migrate usa
 APP_DB_PASSWORD=...            # papel de aplicação (vip_app): é com ele que o app conecta
 SEED_DEMO=false
 RETENTION_DAYS=365
 ```
 
-Com Postgres gerenciado (fora do compose), rode `python -m app.cli preparar-banco` com `DATABASE_URL_ADMIN` apontando para o usuário dono e `APP_DB_USER`/`APP_DB_PASSWORD` definidos; depois aponte o `DATABASE_URL` do app para o papel de aplicação. O app **recusa subir em produção** se o `DATABASE_URL` for superusuário, tiver `BYPASSRLS` ou for dono das tabelas: nesses casos o RLS não valeria.
+O backend monta as URLs do banco a partir de `DB_HOST`, `DB_PORT`, `POSTGRES_DB` e dos usuários: o app usa `APP_DB_USER`/`APP_DB_PASSWORD`; só o `migrate` usa `POSTGRES_USER`/`POSTGRES_PASSWORD` (o compose apaga a senha do dono nos containers do app). Com Postgres gerenciado (fora do compose), defina `DB_HOST` e rode `python -m app.cli preparar-banco` uma vez com as credenciais do dono. O app **recusa subir em produção** se o usuário dele for superusuário, tiver `BYPASSRLS` ou for dono das tabelas: nesses casos o RLS não valeria.
+
+Se o seu `.env` é antigo e ainda tem `DATABASE_URL=...`, apague essa linha: ela tem prioridade e faria o app conectar como o dono das tabelas.
 
 Em produção o app **recusa subir** com modo simulado ligado, cookies inseguros, segredos vazios ou dados de demonstração. Sem `ENVIRONMENT` definido o padrão já é `production`; o `.env.example` declara `development` para o uso local.
 

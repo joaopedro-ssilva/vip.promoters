@@ -37,7 +37,7 @@ async def prepare_app_role() -> None:
         raise SystemExit("APP_DB_USER invalido")
     if not settings.app_db_password:
         raise SystemExit("APP_DB_PASSWORD e obrigatorio")
-    conn = await asyncpg.connect(_plain_dsn(settings.database_url_admin))
+    conn = await asyncpg.connect(_plain_dsn(settings.db_admin_url))
     try:
         dbname = await conn.fetchval("SELECT current_database()")
         async with conn.transaction():
@@ -73,8 +73,10 @@ async def prepare_app_role() -> None:
 
 
 def prepare_database() -> None:
-    if not settings.database_url_admin:
-        raise SystemExit("DATABASE_URL_ADMIN e obrigatorio para preparar o banco")
+    if not settings.db_admin_url:
+        raise SystemExit(
+            "Defina POSTGRES_USER e POSTGRES_PASSWORD (ou DATABASE_URL_ADMIN) para preparar o banco"
+        )
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     cmd = [sys.executable, "-m", "alembic", "upgrade", "head"]
     subprocess.run(cmd, cwd=root, check=True)  # noqa: S603

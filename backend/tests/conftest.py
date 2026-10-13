@@ -8,14 +8,30 @@ import sys
 import tempfile
 from pathlib import Path
 
+
 # ---- ambiente de teste: definido ANTES de importar a aplicacao ----------------------
 # DATABASE_URL_ADMIN (ou, na falta, DATABASE_URL) e um papel que cria bancos e papeis. O app
 # roda nos testes com o PAPEL DE APLICACAO, como em producao: o RLS vale de verdade aqui.
-_admin_url = os.environ.get("DATABASE_URL_ADMIN") or os.environ.get("DATABASE_URL")
+def _admin_from_parts() -> str | None:
+    """Mesmas partes que o compose usa (POSTGRES_USER/POSTGRES_PASSWORD/DB_HOST)."""
+    from urllib.parse import quote
+
+    user, pwd = os.environ.get("POSTGRES_USER"), os.environ.get("POSTGRES_PASSWORD")
+    if not (user and pwd):
+        return None
+    host = os.environ.get("DB_HOST", "localhost")
+    port = os.environ.get("DB_PORT", "5432")
+    db = os.environ.get("POSTGRES_DB", "vip")
+    return f"postgresql+asyncpg://{quote(user, safe='')}:{quote(pwd, safe='')}@{host}:{port}/{db}"
+
+
+_admin_url = (
+    os.environ.get("DATABASE_URL_ADMIN") or os.environ.get("DATABASE_URL") or _admin_from_parts()
+)
 if not _admin_url:
     raise RuntimeError(
-        "Defina DATABASE_URL_ADMIN (um usuario do Postgres que cria bancos e papeis) "
-        "para rodar os testes."
+        "Defina DATABASE_URL_ADMIN (ou POSTGRES_USER e POSTGRES_PASSWORD): um usuario do "
+        "Postgres que cria bancos e papeis, para rodar os testes."
     )
 TEST_DB = "vip_test"
 # Papel PROPRIO dos testes: papeis valem para o servidor inteiro, e reaproveitar o vip_app

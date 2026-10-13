@@ -43,7 +43,7 @@ async def test_delete_account_requires_password_and_confirmation():
     )
     assert r.status_code == 422 and "confirmation" in r.json()["error"]["fields"]
     r = await p.client.post(
-        f"{API}/auth/delete-account", json={"password": "errada", "confirmation": "EXCLUIR"}
+        f"{API}/auth/delete-account", json={"password": PASSWORD[::-1], "confirmation": "EXCLUIR"}
     )
     assert r.status_code == 422 and "password" in r.json()["error"]["fields"]
     assert await count(User, User.id == p.user["id"]) == 1

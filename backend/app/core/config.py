@@ -5,6 +5,7 @@ import hashlib
 import hmac
 from functools import lru_cache
 from typing import Literal
+from urllib.parse import quote
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -24,11 +25,18 @@ class Settings(BaseSettings):
     environment: Literal["development", "production"] = "production"
     app_url: str = "http://localhost:3000"
     allowed_origins: str = "http://localhost:3000"
-    # DATABASE_URL e o papel de APLICACAO (sem superusuario, sem BYPASSRLS, nao e dono das
-    # tabelas): e ele que faz o RLS valer. DATABASE_URL_ADMIN e o dono das tabelas, usado so
-    # por `python -m app.cli preparar-banco` (migracoes + papel de aplicacao).
-    database_url: str = "postgresql+asyncpg://localhost:5432/vip"  # sem credenciais: use o .env
+    # Banco. O app conecta com o papel de APLICACAO (APP_DB_USER: sem superusuario, sem
+    # BYPASSRLS, nao e dono das tabelas): e ele que faz o RLS valer. O dono das tabelas
+    # (POSTGRES_USER) so e usado por `python -m app.cli preparar-banco`.
+    # As URLs sao montadas a partir das partes; nenhuma senha precisa aparecer numa URL
+    # escrita em arquivo. DATABASE_URL / DATABASE_URL_ADMIN, se definidas, tem prioridade.
+    database_url: str = ""
     database_url_admin: str = ""
+    db_host: str = "localhost"
+    db_port: int = 5432
+    postgres_db: str = "vip"
+    postgres_user: str = ""
+    postgres_password: str = ""
     app_db_user: str = "vip_app"
     app_db_password: str = ""
     redis_url: str = "redis://redis:6379/0"
@@ -120,6 +128,28 @@ class Settings(BaseSettings):
             return hmac.new(
                 self.secret_key.encode(), b"dev-webhook-secret", hashlib.sha256
             ).hexdigest()
+        return ""
+
+    def _pg_url(self, user: str, password: str) -> str:
+        auth = quote(user, safe="") + (":" + quote(password, safe="") if password else "")
+        return f"postgresql+asyncpg://{auth}@{self.db_host}:{self.db_port}/{self.postgres_db}"
+
+    @property
+    def db_url(self) -> str:
+        """URL do papel de aplicacao (a que o app e o worker usam)."""
+        if self.database_url:
+            return self.database_url
+        if not self.app_db_password:
+            raise RuntimeError("Defina APP_DB_PASSWORD (ou DATABASE_URL) no .env")
+        return self._pg_url(self.app_db_user, self.app_db_password)
+
+    @property
+    def db_admin_url(self) -> str:
+        """URL do dono das tabelas (so migracoes). Vazia se nao configurada."""
+        if self.database_url_admin:
+            return self.database_url_admin
+        if self.postgres_user and self.postgres_password:
+            return self._pg_url(self.postgres_user, self.postgres_password)
         return ""
 
     @property

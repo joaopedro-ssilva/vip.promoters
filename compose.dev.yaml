@@ -36,7 +36,8 @@ services:
     profiles: ["test"]
     env_file: .env
     environment:
-      DATABASE_URL_ADMIN: postgresql+asyncpg://${POSTGRES_USER:-vip}:${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}@db:5432/${POSTGRES_DB:-vip}
+      DB_HOST: db
+      POSTGRES_USER: ${POSTGRES_USER:-vip}
       REDIS_URL: redis://redis:6379/0
     command: ["pytest", "-q"]
     volumes:

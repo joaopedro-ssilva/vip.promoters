@@ -1,13 +1,15 @@
 name: vip-promoters
 
-# O app conecta com o PAPEL DE APLICACAO (APP_DB_USER): sem superusuario, sem BYPASSRLS e
-# sem ser dono das tabelas, para o Row Level Security valer. O dono (POSTGRES_USER) so e
-# usado pelo servico `migrate`.
+# O app conecta com o PAPEL DE APLICACAO (APP_DB_USER/APP_DB_PASSWORD do .env): sem
+# superusuario, sem BYPASSRLS e sem ser dono das tabelas, para o Row Level Security valer.
+# O backend monta a URL do banco a partir dessas partes (nenhuma senha em URL aqui). A senha
+# do dono (POSTGRES_PASSWORD) e apagada nos containers do app: so o `migrate` a recebe.
 x-backend-env: &backend-env
   env_file: .env
   environment:
-    DATABASE_URL: postgresql+asyncpg://${APP_DB_USER:-vip_app}:${APP_DB_PASSWORD:?defina APP_DB_PASSWORD no .env}@db:5432/${POSTGRES_DB:-vip}
-    DATABASE_URL_ADMIN: ""
+    DB_HOST: db
+    POSTGRES_DB: ${POSTGRES_DB:-vip}
+    POSTGRES_PASSWORD: ""
     REDIS_URL: redis://redis:6379/0
     UPLOAD_DIR: /data/uploads
 
@@ -17,7 +19,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-vip}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB:-vip}
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -43,12 +45,11 @@ services:
       context: ./backend
     image: vip-promoters-backend
     restart: "no"
-    env_file: .env
+    env_file: .env  # POSTGRES_PASSWORD e APP_DB_PASSWORD vem daqui
     environment:
-      DATABASE_URL: postgresql+asyncpg://${APP_DB_USER:-vip_app}:${APP_DB_PASSWORD:?defina APP_DB_PASSWORD no .env}@db:5432/${POSTGRES_DB:-vip}
-      DATABASE_URL_ADMIN: postgresql+asyncpg://${POSTGRES_USER:-vip}:${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}@db:5432/${POSTGRES_DB:-vip}
-      APP_DB_USER: ${APP_DB_USER:-vip_app}
-      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+      DB_HOST: db
+      POSTGRES_USER: ${POSTGRES_USER:-vip}
+      POSTGRES_DB: ${POSTGRES_DB:-vip}
     command: ["python", "-m", "app.cli", "preparar-banco"]
     depends_on:
       db:

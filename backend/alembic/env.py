@@ -11,7 +11,7 @@ target_metadata = Base.metadata
 
 
 # Migracao roda com o DONO das tabelas; o app conecta com o papel de aplicacao.
-MIGRATION_URL = settings.database_url_admin or settings.database_url
+MIGRATION_URL = settings.db_admin_url or settings.db_url
 
 
 def run_migrations_offline() -> None:

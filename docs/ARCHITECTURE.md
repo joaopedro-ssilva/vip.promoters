@@ -463,7 +463,7 @@ otherwise 403 `membership_not_approved`.
 ENVIRONMENT=development            # development | production
 APP_URL=http://localhost:3000      # public URL of the frontend (used for redirects, invite links, upload URLs)
 ALLOWED_ORIGINS=http://localhost:3000
-DATABASE_URL=postgresql+asyncpg://USUARIO:SENHA@db:5432/vip
+DB_HOST=db                     # the backend builds the database URL from DB_HOST, POSTGRES_DB, APP_DB_USER and APP_DB_PASSWORD
 REDIS_URL=redis://redis:6379/0
 SECRET_KEY=                        # JWT + state signing
 TOKEN_ENCRYPTION_KEY=              # Fernet key
@@ -541,7 +541,10 @@ Additions made while implementing; nothing above was removed or renamed.
   public routes and deliberate cross-tenant flows (`process_event`, joining by invite, account
   deletion) run in `system` mode. The app must connect as `APP_DB_USER` (no superuser, no
   `BYPASSRLS`, not the table owner); `python -m app.cli preparar-banco` (run by the compose
-  `migrate` service with `DATABASE_URL_ADMIN`) applies migrations and creates/grants that role.
+  `migrate` service with the owner credentials `POSTGRES_USER`/`POSTGRES_PASSWORD`) applies
+  migrations and creates/grants that role. Database URLs are built from parts (`DB_HOST`,
+  `DB_PORT`, `POSTGRES_DB` and the user/password pairs); `DATABASE_URL` /
+  `DATABASE_URL_ADMIN` still override them when set.
   Production refuses to start otherwise.
 - New endpoints:
 
@@ -572,6 +575,6 @@ Additions made while implementing; nothing above was removed or renamed.
   `RETENTION_DAYS` ago, deletes expired sessions and read notifications older than
   `NOTIFICATION_RETENTION_DAYS`) and `rotate_encrypted_tokens` (re-encrypts Instagram tokens
   when `TOKEN_ENCRYPTION_KEY_PREVIOUS` is set). New column `campaigns.ended_at`.
-- New env vars: `DATABASE_URL_ADMIN`, `APP_DB_USER`, `APP_DB_PASSWORD`, `SECRET_KEY_PREVIOUS`,
+- New env vars: `DB_HOST`, `DB_PORT`, `APP_DB_USER`, `APP_DB_PASSWORD`, `DATABASE_URL_ADMIN` (optional), `SECRET_KEY_PREVIOUS`,
   `TOKEN_ENCRYPTION_KEY_PREVIOUS`, `META_WEBHOOK_SECRET`, `RETENTION_DAYS`,
   `NOTIFICATION_RETENTION_DAYS`.
