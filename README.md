@@ -21,7 +21,7 @@ Regra central: **no máximo 1 comentário pontuado por promoter em cada campanha
 | Cobrança, recuperação de senha, e-mails, painel de administrador | Não existem |
 | Hospedagem | Roda só na máquina local, via Docker |
 
-Gargalos e dúvidas que dependem de decisão (sua, de advogado ou da Meta) estão em [docs/DECISOES.md](docs/DECISOES.md).
+O que falta decidir e fazer, em ordem: [Etapas para o App Review e o lançamento](#etapas-para-o-app-review-e-o-lançamento-como-saas), [Decisões em aberto](#decisões-em-aberto) e [Próximos passos](#próximos-passos). Os gargalos técnicos estão em [docs/DECISOES.md](docs/DECISOES.md).
 
 ## O que o Instagram deixa (e não deixa) saber
 
@@ -150,7 +150,9 @@ O caminho completo, em ordem. Cada fase diz se é código (já feito ou a fazer)
 3. `.env` de produção completo, com segredos novos (lista em [Colocando em produção](#colocando-em-produção)).
 4. Monitor de disponibilidade apontado para `/api/v1/health/ready` (UptimeRobot, Better Stack…).
 
-### Fase 3: Instagram real em modo de teste (você, seguindo o [guia](docs/META.md), Parte 1)
+### Fase 3: Instagram real em modo de teste (você)
+
+Siga o [guia da Meta](docs/META.md), Parte 1.
 
 1. Criar o app na Meta ("API setup with Instagram login") e preencher `META_APP_ID` / `META_APP_SECRET`.
 2. Cadastrar as URLs no painel: redirecionamento, webhook (campos `comments` e `messages`), desautorização e exclusão de dados.
@@ -192,6 +194,50 @@ O caminho completo, em ordem. Cada fase diz se é código (já feito ou a fazer)
 | **Uploads em S3/R2** | permite mais de um servidor e entra no backup | código |
 | **Monitoramento de erros** (Sentry) e alerta de webhook descartado | saber dos problemas antes do cliente | código |
 | **Processo de suporte LGPD** (e-mail da Política, `python -m app.cli esquecer @fulano`) | atende pedidos de quem só comentou | você |
+
+## Decisões em aberto
+
+Pontos que o código não resolve sozinho. A recomendação é a sugestão técnica; quem decide está na última coluna. O raciocínio completo de cada item está em [docs/DECISOES.md](docs/DECISOES.md).
+
+### De produto e negócio
+
+| # | Decisão | Como está hoje | Recomendação | Quem decide |
+|---|---|---|---|---|
+| 1 | Promoter que exclui a conta: o que acontece com os resgates pendentes dele? | Somem, e o estoque da recompensa volta | Manter um registro anônimo, se o gestor precisar fechar contas com o fornecedor | você |
+| 2 | Gestor que exclui a conta | Exclusão imediata, sem carência e sem exportação | 30 dias para desfazer e um CSV antes de apagar, quando houver cobrança | você |
+| 3 | Prazo de retenção das interações | 365 dias após o fim da campanha (`RETENTION_DAYS`) | Manter, se o advogado concordar | você + advogado |
+| 4 | Quem perde um @ na disputa fica com os pontos que já ganhou? | Fica | Não estornar automaticamente; avisar o gestor e deixar o "ajustar pontos" com ele | você |
+| 5 | Processo do suporte para @ já verificado por outra pessoa | O app manda "fale com o suporte", mas não há processo | Pedir um comentário com código novo e trocar o dono à mão | você |
+| 6 | Papel na LGPD: o gestor é controlador e o VIP Promoters é operador? | A Política sugere isso | Confirmar com advogado e incluir cláusulas de operador nos Termos | advogado |
+| 7 | Planos, preço e limites | Não existem | Definir antes de implementar a cobrança | você |
+
+### Técnicas, que só o teste com a Meta responde
+
+| # | Dúvida | Preparado no código |
+|---|---|---|
+| 8 | Qual chave assina os webhooks (a do app Meta ou a do app do Instagram)? | `META_WEBHOOK_SECRET` opcional |
+| 9 | Comentários de quem não é testador chegam no modo de teste? | Sem resposta, a verificação de @ só funciona com testadores até o App Review |
+| 10 | Comentário apagado gera webhook? | Sem webhook, o estorno automático exigiria comparar listas no polling |
+| 11 | Quanto o polling a cada 2 minutos consome da cota da Graph API? | Ajustável com `SYNC_INTERVAL_SECONDS` |
+
+## Próximos passos
+
+Em ordem. "Você" é ação fora do código; "código" é desenvolvimento.
+
+| # | Passo | Quem | Destrava |
+|---|---|---|---|
+| 1 | Rodar `docker compose up -d --build` na sua máquina (com `APP_DB_PASSWORD` no `.env`) e conferir os fluxos novos | você | o primeiro deploy |
+| 2 | Abrir o CNPJ e pedir a verificação do Meta Business (1 a 5 dias úteis) | você | o App Review |
+| 3 | Domínio, e-mail de contato e preencher `frontend/src/lib/legal.ts`; revisão da Política e dos Termos com advogado | você | o App Review |
+| 4 | Servidor com HTTPS, Postgres com backup e monitor em `/api/v1/health/ready` ([Fase 2](#fase-2-hospedagem-de-produção-você)) | você | a Fase 3 |
+| 5 | Testar o Instagram real em modo de teste ([Fase 3](#fase-3-instagram-real-em-modo-de-teste-você)) e responder as dúvidas 8 a 11 | você | o pedido do App Review |
+| 6 | Aviso no onboarding do gestor para ligar "Permitir acesso às mensagens" no Instagram | código | as menções em story |
+| 7 | CI no GitHub (testes do backend e build do frontend a cada push) e atualização automática de dependências | código | segurança contínua |
+| 8 | E-mail transacional, recuperação de senha e confirmação de e-mail | código | operar sem suporte manual |
+| 9 | Montar e enviar o App Review ([Fase 4](#fase-4-montar-o-pedido-do-app-review)) | você | o modo Ao vivo |
+| 10 | Cobrança (depois da decisão 7) e painel de administrador | código | o SaaS pago |
+| 11 | Uploads em S3/R2 e monitoramento de erros (Sentry) | código | mais de um servidor |
+| 12 | Segundo fator de login para o gestor e um pentest externo | código + terceiros | clientes pagantes |
 
 ## Segurança
 
